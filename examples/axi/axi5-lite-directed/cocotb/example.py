@@ -8,6 +8,7 @@ import avl
 import avl_axi
 import cocotb
 
+
 class DirectedSequence(avl_axi.ManagerSequence):
     async def body(self) -> None:
         """
@@ -67,12 +68,7 @@ class example_env(avl.Env):
 @cocotb.test
 async def test(dut):
     """
-    Example Simple interface
-        - AXI5-Lite (no bursts)
-        - 3 bit read and write ids
-        - Slave acts as memory
-        - Size + Strobes
-        - Directed sequence of reads and writes
+    Example AXI5 Interface directed sequence
 
     :param dut: The DUT instance
     :return: None

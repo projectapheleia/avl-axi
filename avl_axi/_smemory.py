@@ -7,8 +7,9 @@
 import avl
 
 from ._item import ReadItem, WriteItem
-from ._utils import *
-from ._types import *
+from ._types import axi_atomic_t, axi_resp_t
+from ._utils import get_burst_addresses
+
 
 class SubordinateMemory(avl.Memory):
 
@@ -116,7 +117,6 @@ class SubordinateMemory(avl.Memory):
         :rtype: int
         """
 
-        old_value = self.read(address, num_bytes=num_bytes)
         self.write(address, value, num_bytes = num_bytes)
 
     def compare(self, address: int, value: int, compare: int, num_bytes : int = None) -> int:
@@ -366,6 +366,6 @@ class SubordinateMemory(avl.Memory):
         # Consistent DECERR
         if item._Consistent_DECERR_ and decerr:
             for i in range(len(item.rresp)):
-                item.set("rresp", axi_resp_t.DECERR, idx=1)
+                item.set("rresp", axi_resp_t.DECERR, idx=i)
 
 __all__ = ["SubordinateMemory"]

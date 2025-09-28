@@ -4,11 +4,11 @@
 # Apheleia attributes example
 
 
+
 import avl
 import avl_axi
 import cocotb
-from avl_axi._types import *
-import random
+
 
 class CustomWrite(avl_axi.WriteItem):
 
@@ -45,12 +45,7 @@ class example_env(avl.Env):
 @cocotb.test
 async def test(dut):
     """
-    Example Simple interface
-        - AXI5 (burst with wlast/rlast)
-        - Untranslated_Transactions
-        - Memory semantics
-        - All zero delay
-        - 100 items mix of read and write
+    Example AXI5-Lite with translation
 
     :param dut: The DUT instance
     :return: None

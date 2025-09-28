@@ -3,15 +3,14 @@
 # Description:
 # Apheleia Verification Library Driver
 
+import asyncio
 import random
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge, FallingEdge
-import asyncio
+from cocotb.triggers import FallingEdge, RisingEdge
 
 from ._item import SequenceItem
-from ._signals import *
 
 ASLEEP = 0
 PRE_WAKE = 1
@@ -48,6 +47,9 @@ class ManagerWakeDriver(avl.Driver):
     def _update_status_(self, new_status : int) -> None:
         """
         Update status
+
+        :param new_status: New status to set
+        :type new_status: int
         """
         if self.status != new_status:
             self.debug(f"_update_status_ {self.status} -> {new_status}")
@@ -83,7 +85,15 @@ class ManagerWakeDriver(avl.Driver):
             pass
 
     async def assert_wake(self, item : SequenceItem) -> None:
+        """
+        Assert wake for the given item.
+        This method is called to assert the wake signal for the given item.
+        It waits for the pre-wakeup delay, asserts the wake signal, and then waits for
+        the post-wakeup delay before setting the item event to "awake".
 
+        :param item: The sequence item for which to assert wake
+        :type item: SequenceItem
+        """
         while self.status == PRE_SLEEP:
             await RisingEdge(self.i_f.aclk)
 
@@ -113,6 +123,15 @@ class ManagerWakeDriver(avl.Driver):
         self._outstanding_transactions_ += 1
 
     async def deassert_wake(self, item : SequenceItem) -> None:
+        """
+        Deassert wake for the given item.
+        This method is called to deassert the wake signal for the given item.
+        It waits for the item event "response" to be set, indicating that the item has
+        been processed, and then deasserts the wake signal if there are no outstanding transactions.
+
+        :param item: The sequence item for which to deassert wake
+        :type item: SequenceItem
+        """
 
         if item.get("goto_sleep", default=False):
             self._update_status_(PRE_SLEEP)
@@ -137,7 +156,6 @@ class ManagerWakeDriver(avl.Driver):
         This method is called during the run phase of the simulation.
         It is responsible for driving the request signals based on the sequencer's items.
 
-        :raises NotImplementedError: If the run phase is not implemented.
         """
         async def wake_loop():
             item = None

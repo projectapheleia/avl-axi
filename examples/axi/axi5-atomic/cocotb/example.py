@@ -7,7 +7,8 @@
 import avl
 import avl_axi
 import cocotb
-from avl_axi._types import *
+from avl_axi._types import axi_atomic_t, axi_resp_t
+
 
 class DirectedSequence(avl_axi.ManagerSequence):
     async def body(self) -> None:
@@ -147,12 +148,7 @@ class example_env(avl.Env):
 @cocotb.test
 async def test(dut):
     """
-    Example Simple interface
-        - AXI5 (burst with wlast/rlast)
-        - Atomic Accesses
-        - Memory semantics
-        - All cmds wait for resposne
-        - Directed atomic tests
+    Example AXI5 with atomic operations
 
     :param dut: The DUT instance
     :return: None

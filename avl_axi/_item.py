@@ -6,10 +6,11 @@
 from typing import Any
 
 import avl
-from ._signals import *
-from ._types import *
+from z3 import UGE, ULE, And, BitVecVal, Implies, Or, ZeroExt
 
-from z3 import Implies, And, Or, UGE, ULE, ZeroExt, BitVecVal
+from ._signals import ar_m_signals, aw_m_signals, b_s_signals, is_random, r_s_signals, w_m_signals
+from ._types import axi_atomic_t, axi_burst_t, axi_resp_t, signal_to_type
+
 
 class SequenceItem(avl.SequenceItem):
 
@@ -19,6 +20,7 @@ class SequenceItem(avl.SequenceItem):
 
         :param name: Name of the sequence item
         :param parent: Parent component of the sequence item
+        :return: None
         """
         super().__init__(name, parent)
 
@@ -41,6 +43,11 @@ class SequenceItem(avl.SequenceItem):
     def resize(self, size : int = None) -> None:
         """
         Re-size transaction data fields based on len
+
+        :param size: New size of the transaction (len+1) - if None use current len+1
+        :type size: int
+        :return: None
+
         """
         if size is None:
             n = self.get_len()+1
@@ -63,16 +70,24 @@ class SequenceItem(avl.SequenceItem):
                     setattr(self, s, lst[:n])
 
         # Force IDs, loop to match
-        if hasattr(self, "bid") : self.set("bid", self.get("awid", default=0))
-        if hasattr(self, "bloop") : self.set("bloop", self.get("awloop", default=0))
-        if hasattr(self, "btrace"): self.set("btrace", self.get("awtrace", default=0))
-        if hasattr(self, "bidunq"): self.set("bidunq", self.get("awidunq"))
+        if hasattr(self, "bid") :
+            self.set("bid", self.get("awid", default=0))
+        if hasattr(self, "bloop") :
+            self.set("bloop", self.get("awloop", default=0))
+        if hasattr(self, "btrace"):
+            self.set("btrace", self.get("awtrace", default=0))
+        if hasattr(self, "bidunq"):
+            self.set("bidunq", self.get("awidunq"))
 
         for i in range(n):
-            if hasattr(self, "rid") : self.set("rid", self.get_id(), idx=i)
-            if hasattr(self, "rloop") : self.set("rloop", self.get("arloop", default=0), idx=i)
-            if hasattr(self, "rtrace") : self.set("rtrace", self.get("artrace", default=0), idx=i)
-            if hasattr(self, "ridunq") : self.set("ridunq", self.get("aridunq", default=0), idx=i)
+            if hasattr(self, "rid") :
+                self.set("rid", self.get_id(), idx=i)
+            if hasattr(self, "rloop") :
+                self.set("rloop", self.get("arloop", default=0), idx=i)
+            if hasattr(self, "rtrace") :
+                self.set("rtrace", self.get("artrace", default=0), idx=i)
+            if hasattr(self, "ridunq") :
+                self.set("ridunq", self.get("aridunq", default=0), idx=i)
 
     def sanity(self) -> None:
         """
@@ -105,7 +120,7 @@ class SequenceItem(avl.SequenceItem):
             elif self.get_burst() == axi_burst_t.WRAP:
                 assert self.get_addr() % self.get_size() == 0
             else:
-                raise ValueError(f"Unexpected burst type")
+                raise ValueError("Unexpected burst type")
 
         if self.has_bresp():
             # Signals which must match command -> response
@@ -143,7 +158,7 @@ class SequenceItem(avl.SequenceItem):
             elif self.get_burst() == axi_burst_t.WRAP:
                 mask = self.get_size() -1
             else:
-                raise ValueError(f"Unexpected burst_type_t {self.get("aw")}")
+                raise ValueError(f"Unexpected burst_type_t {self.get('aw')}")
 
             self.set_addr(addr & ~mask)
 
@@ -153,6 +168,7 @@ class SequenceItem(avl.SequenceItem):
 
         :param name: Name of the field to set
         :param value: Value to set for the field
+        :return: None
         """
         signal = getattr(self, name, None)
         if isinstance(signal, list):
@@ -310,7 +326,7 @@ class SequenceItem(avl.SequenceItem):
             return True
 
 class WriteItem(SequenceItem):
-    def __init__(self, name: str, parent: avl.Component) -> None:
+    def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
         """
         Initialize the sequence item
 
@@ -395,14 +411,16 @@ class WriteItem(SequenceItem):
             self.add_constraint("c_awlen", lambda x : ULE(x,len(self.wdata)-1), self.awlen)
 
             if hasattr(self, "awsize"):
-                self.add_constraint("c_max_transaction_bytes", lambda x,y : ULE(((ZeroExt(8, x) + BitVecVal(1, 16)) << ZeroExt(13, y)), BitVecVal(i_f.Max_Transaction_Bytes,16)), self.awlen, self.awsize)
+                self.add_constraint("c_max_transaction_bytes",
+                                     lambda x,y : ULE(((ZeroExt(8, x) + BitVecVal(1, 16)) << ZeroExt(13, y)), BitVecVal(i_f.Max_Transaction_Bytes,16)),
+                                     self.awlen, self.awsize)
             else:
                 self.add_constraint("c_max_transaction_bytes", lambda x : ULE((ZeroExt(8, x) + BitVecVal(1, 16)), BitVecVal(i_f.Max_Transaction_Bytes,16)), self.awlen)
         elif hasattr(self, "awsize"):
             self.add_constraint("c_max_transaction_bytes", lambda y : ULE(1 << ZeroExt(13, y), BitVecVal(i_f.Max_Transaction_Bytes,16)), self.awsize)
 
         if hasattr(self, "awatop"):
-            self.add_constraint("c_awatop_size", lambda x,y : Implies(y != ATOMIC_NON_ATOMIC, And(UGE(x,1), ULE(x,5))), self.awatop, self.awsize)
+            self.add_constraint("c_awatop_size", lambda x,y : Implies(y != axi_atomic_t.ATOMIC_NON_ATOMIC, And(UGE(x,1), ULE(x,5))), self.awatop, self.awsize)
 
         if hasattr(self, "swstashniden"):
             self.add_constraint("c_swstashnid", lambda x,y : Implies(y == 0, x == 0), self.awstashniden, self.awstashnid)
@@ -428,7 +446,7 @@ class WriteItem(SequenceItem):
                 self.add_constraint("c_regualr_burst", lambda x : x != axi_burst_t.FIXED, self.awburst)
 
 class ReadItem(SequenceItem):
-    def __init__(self, name: str, parent: avl.Component) -> None:
+    def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
         """
         Initialize the sequence item
 

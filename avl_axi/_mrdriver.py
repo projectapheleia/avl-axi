@@ -3,15 +3,14 @@
 # Description:
 # Apheleia Verification Library Driver
 
-import random
 
 import avl
 import cocotb
 from cocotb.triggers import RisingEdge
 
 from ._driver import Driver
-from ._item import SequenceItem
-from ._signals import *
+from ._signals import ar_m_signals, r_m_signals, r_s_signals
+
 
 class ManagerReadDriver(Driver):
 
@@ -50,11 +49,21 @@ class ManagerReadDriver(Driver):
             self.i_f.set(s, 0)
 
     async def quiesce_control(self) -> None:
+        """
+        Quiesce the control signals by setting them to their default values.
+        This method is called after driving the control signals.
+
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in ar_m_signals:
             self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
-
+        """
+        Drive the control signals based on the items in the control queue.
+        This method is called during the run phase of the simulation.
+        It waits for items in the control queue and drives the corresponding signals.
+        """
         self.controlQ = []
         while True:
 
@@ -104,17 +113,34 @@ class ManagerReadDriver(Driver):
             item.set_event("control", item)
 
     async def quiesce_data(self) -> None:
+        """
+        Quiesce the data signals by setting them to their default values.
+        This method is called after driving the data signals.
+        """
         pass
 
     async def drive_data(self) -> None:
+        """
+        Drive the data signals based on the items in the data queue.
+        This method is called during the run phase of the simulation.
+        """
         pass
 
     async def quiesce_response(self) -> None:
+        """
+        Quiesce the response signals by setting them to their default values.
+        This method is called after driving the response signals.
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in r_m_signals:
             self.i_f.set(s, 0)
 
     async def drive_response(self):
-
+        """
+        Drive the response signals based on the items in the response queue.
+        This method is called during the run phase of the simulation.
+        It waits for items in the response queue and drives the corresponding signals.
+        """
         for k in self.responseQ.keys():
             self.responseQ[k] = []
         while True:

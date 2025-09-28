@@ -30,12 +30,7 @@ class example_env(avl.Env):
 @cocotb.test
 async def test(dut):
     """
-    Example Simple interface
-        - AXI5-Lite (no bursts)
-        - 3 bit read and write ids
-        - Random data
-        - Manager control delays (short write, long read)
-        - 100 items mix of read and write
+    Example AXI5-Lite interface with wdata before awaddr phase
 
     :param dut: The DUT instance
     :return: None

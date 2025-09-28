@@ -6,7 +6,8 @@
 import avl
 
 from ._item import SequenceItem
-from ._types import *
+from ._types import axi_resp_t
+
 
 class ExclusivityMonitor(avl.Component):
     def __init__(self, name: str, parent: avl.Component) -> None:

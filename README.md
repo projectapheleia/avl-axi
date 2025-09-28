@@ -1,11 +1,11 @@
-# AVL-APB - Apheleia Verification Library AMBA APB Verification Component
+# AVL-AXI - Apheleia Verification Library AMBA AXI Verification Component
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.7%2B-blue)](https://www.python.org/)
 
 
-AVL-APB has been developed by experienced, industry professional verification engineers to provide a simple, \
-extensible verification component for the [AMBA APB Bus](https://developer.arm.com/documentation/ihi0024/latest/) \
+AVL-AXI has been developed by experienced, industry professional verification engineers to provide a simple, \
+extensible verification component for the [AMBA AXI Bus](https://developer.arm.com/documentation/ihi0022/k/?lang=en) \
 developed in [Python](https://www.python.org/) and the [AVL](https://avl-core.readthedocs.io/en/latest/index.html) library.
 
 AVL is built on the [CocoTB](https://docs.cocotb.org/en/stable/) framework, but aims to combine the best elements of \

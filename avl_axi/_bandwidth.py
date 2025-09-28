@@ -7,7 +7,7 @@ import avl
 import cocotb
 import matplotlib.pyplot as plt
 import numpy as np
-from cocotb.triggers import Timer, NextTimeStep
+from cocotb.triggers import NextTimeStep, Timer
 from cocotb.utils import get_sim_time
 
 
@@ -50,7 +50,7 @@ class Bandwidth(avl.Component):
                         else:
                             incr += 2**self.item.get("awsize", default=0)
                 elif hasattr(self.item, "rdata"):
-                    for i in range(self.item.get_len()):
+                    for _ in range(self.item.get_len()):
                         incr += 2**self.item.get("arsize", default=0)
 
                 self.bandwidth[t] += incr

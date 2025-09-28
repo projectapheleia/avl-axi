@@ -9,18 +9,18 @@ from cocotb.triggers import NextTimeStep, RisingEdge
 
 from ._agent_cfg import AgentCfg
 from ._bandwidth import Bandwidth
-from ._swdriver import SubordinateWriteDriver
-from ._srdriver import SubordinateReadDriver
 from ._coverage import Coverage
-from ._interface import Interface
-from ._wmonitor import WriteMonitor
-from ._rmonitor import ReadMonitor
-from ._mwdriver import ManagerWriteDriver
-from ._mrdriver import ManagerReadDriver
-from ._mwakedriver import ManagerWakeDriver
-from ._msequence import ManagerSequence
 from ._emonitor import ExclusivityMonitor
+from ._interface import Interface
+from ._mrdriver import ManagerReadDriver
+from ._msequence import ManagerSequence
+from ._mwakedriver import ManagerWakeDriver
+from ._mwdriver import ManagerWriteDriver
+from ._rmonitor import ReadMonitor
 from ._smemory import SubordinateMemory
+from ._srdriver import SubordinateReadDriver
+from ._swdriver import SubordinateWriteDriver
+from ._wmonitor import WriteMonitor
 
 
 class Agent(avl.Agent):

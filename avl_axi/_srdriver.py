@@ -6,13 +6,12 @@
 import random
 
 import avl
-
 from cocotb.triggers import RisingEdge
 
 from ._driver import Driver
-from ._item import SequenceItem, ReadItem
-from ._signals import *
-from ._utils import *
+from ._item import ReadItem, SequenceItem
+from ._signals import ar_m_signals, ar_s_signals, r_s_signals
+
 
 class SubordinateReadDriver(Driver):
 
@@ -61,10 +60,20 @@ class SubordinateReadDriver(Driver):
         self.i_f.set("varqosaccept", self.qosaccept)
 
     async def quiesce_control(self) -> None:
+        """
+        Quiesce the control channel by setting all control signals to their default values.
+        This method is called after a control transaction is completed.
+
+        By default 0's all control signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in ar_s_signals:
             self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
+        """
+        Drive the control channel by sending read address transactions.
+        This method runs in a loop, waiting for the appropriate conditions to send transactions.
+        """
         while True:
 
             self.i_f.set("arready", 0)
@@ -99,17 +108,33 @@ class SubordinateReadDriver(Driver):
             self.responseQ.append(item)
 
     async def quiesce_data(self) -> None:
+        """
+        Quiesce the data channel by setting all data signals to their default values.
+        This method is empty as reads have no data channel.
+        """
         pass
 
     async def drive_data(self) -> None:
+        """
+        Drive the data channel by sending read data transactions.
+        This method is empty as reads have no data channel.
+        """
         pass
 
     async def quiesce_response(self) -> None:
+        """
+        Quiesce the response channel by setting all response signals to their default values.
+        This method is called after a response transaction is completed.
+        By default 0's all response signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in r_s_signals:
             self.i_f.set(s, 0)
 
     async def drive_response(self) -> None:
-
+        """
+        Drive the response channel by sending read data transactions.
+        This method runs in a loop, waiting for the appropriate conditions to send transactions.
+        """
         self.responseQ = avl.List()
         while True:
             while not self.responseQ or self.i_f.get("aresetn") == 0 or self.i_f.get("awakeup", default=1) == 0:
@@ -149,8 +174,18 @@ class SubordinateReadDriver(Driver):
             await self. quiesce_response()
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
+        """
+        Get the next item to be sent on the response channel.
+        This method can be overridden in subclasses to modify the item before it is sent.
+        By default, it initializes the read count if not already set.
+
+        :param item: The item to be sent on the response channel
+        :type item: SequenceItem
+        :return: The item to be sent on the response channel
+        :rtype: SequenceItem
+        """
         if not isinstance(item, SequenceItem):
-            raise ValueError(f"get_next_item() - expected type SequenceItem")
+            raise ValueError("get_next_item() - expected type SequenceItem")
 
         if not hasattr(item, "_rcnt_"):
             item._rcnt_ = 0
@@ -160,8 +195,18 @@ class SubordinateReadDriver(Driver):
 class SubordinateReadRandomDriver(SubordinateReadDriver):
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
+        """
+        Get the next item to be sent on the response channel.
+        This method randomizes the item if it has not been sent before.
+
+        :param item: The item to be sent on the response channel
+        :type item: SequenceItem
+        :return: The item to be sent on the response channel
+        :rtype: SequenceItem
+        """
+
         if not isinstance(item, SequenceItem):
-            raise ValueError(f"get_next_item() - expected type SequenceItem")
+            raise ValueError("get_next_item() - expected type SequenceItem")
 
         if not hasattr(item, "_rcnt_"):
             item._rcnt_ = 0

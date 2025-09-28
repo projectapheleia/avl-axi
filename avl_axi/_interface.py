@@ -9,10 +9,14 @@ from cocotb.handle import HierarchyObject
 
 
 class Interface:
-    def __init__(self, hdl : HierarchyObject) -> None:
+    def __init__(self, hdl : HierarchyObject) -> None: # noqa: C901
         """
         Create an interface
         Work around simulator specific issues with accessing signals inside generates.
+
+        :param hdl: The handle to the interface
+        :type hdl: HierarchyObject
+        :return: None
         """
         # Parameters and Signals
         for child in list(hdl):

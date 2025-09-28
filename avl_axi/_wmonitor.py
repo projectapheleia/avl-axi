@@ -3,13 +3,14 @@
 # Description:
 # Apheleia Verification Library Monitor
 
-import avl
-import cocotb
-from cocotb.triggers import FallingEdge, First, RisingEdge
 import asyncio
 
+import avl
+import cocotb
+from cocotb.triggers import FallingEdge, RisingEdge
+
 from ._item import WriteItem
-from ._signals import *
+from ._signals import aw_m_signals, b_s_signals, w_m_signals
 
 
 class WriteMonitor(avl.Monitor):

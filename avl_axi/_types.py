@@ -3,11 +3,10 @@
 # Description:
 # Apheleia Verification Library Types
 
-import avl
-
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
+import avl
 
 
 class axi_burst_t(avl.Logic):
@@ -41,6 +40,9 @@ class axi_burst_t(avl.Logic):
     def fmt(self, value : int) -> str:
         """
         Custom format
+
+        :param value: The value to format.
+        :return: The formatted string.
         """
         return self.values()[value]
 
@@ -49,6 +51,7 @@ class axi_burst_t(avl.Logic):
         Return a dictionary of types
 
         :return dict
+        :rtype: dict[str, int]
         """
         d = {
                 axi_burst_t.FIXED    : "FIXED",
@@ -114,6 +117,9 @@ class axi_resp_t(avl.Logic):
     def fmt(self, value : int) -> str:
         """
         Custom format
+
+        :param value: The value to format.
+        :return: The formatted string.
         """
         return self.values()[value]
 
@@ -122,6 +128,7 @@ class axi_resp_t(avl.Logic):
         Return a dictionary of types
 
         :return dict
+        :rtype: dict[str, int]
         """
         d = {
                 axi_resp_t.OKAY        : "OKAY",
@@ -179,6 +186,9 @@ class axi_domain_t(avl.Logic):
     def fmt(self, value : int) -> str:
         """
         Custom format
+
+        :param value: The value to format.
+        :return: The formatted string.
         """
         return self.values()[value]
 
@@ -187,6 +197,7 @@ class axi_domain_t(avl.Logic):
         Return a dictionary of types
 
         :return dict
+        :rtype: dict[str, int]
         """
         d = {
                 axi_domain_t.NON_SHAREABLE   : "NON_SHAREABLE",
@@ -259,6 +270,9 @@ class axi_atomic_t(avl.Logic):
     def fmt(self, value : int) -> str:
         """
         Custom format
+
+        :param value: The value to format.
+        :return: The formatted string.
         """
         return self.values()[value]
 
@@ -267,6 +281,7 @@ class axi_atomic_t(avl.Logic):
         Return a dictionary of types
 
         :return dict
+        :rtype: dict[str, int]
         """
         d = {
                 axi_atomic_t.NON_ATOMIC    : "NON_ATOMIC",
@@ -312,13 +327,25 @@ class axi_atomic_t(avl.Logic):
 
         return d
 
-    def has_bresp(self):
+    def has_bresp(self) -> bool:
+        """
+        Returns True if the operation generates a BRESP response, False otherwise.
+
+        :return: bool
+        :rtype: bool
+        """
         if self.value & 0b100000 == 0:
             return True
         else:
             return False
 
-    def endianness(self):
+    def endianness(self) -> str:
+        """
+        Returns the endianness of the operation.
+
+        :return: "little" or "big"
+        :rtype: str
+        """
         if self.value & 0b001000 == 0:
             return "little"
         else:
@@ -357,6 +384,9 @@ class axi_secsid_t(avl.Logic):
     def fmt(self, value : int) -> str:
         """
         Custom format
+
+        :param value: The value to format.
+        :return: The formatted string.
         """
         return self.values()[value]
 
@@ -365,6 +395,7 @@ class axi_secsid_t(avl.Logic):
         Return a dictionary of types
 
         :return dict
+        :rtype: dict[str, int]
         """
         d = {
                 axi_secsid_t.NON_SECURE   : "NON_SECURE",

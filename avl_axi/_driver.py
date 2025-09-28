@@ -4,11 +4,12 @@
 # Apheleia Verification Library Base Driver
 
 
+import asyncio
+import random
+
 import avl
 import cocotb
 from cocotb.triggers import FallingEdge, RisingEdge
-import random
-import asyncio
 
 from ._item import SequenceItem
 
@@ -67,6 +68,10 @@ class Driver(avl.Driver):
     def _deactivate_(self, item : SequenceItem) -> None:
         """
         Track Item
+
+        :param item
+        :type item: SequenceItem
+        :return None
         """
         if item.get_idunq():
             self._unique_ids_[item.get_id()] -= 1
@@ -82,6 +87,10 @@ class Driver(avl.Driver):
     def _activate_(self, item : SequenceItem) -> None:
         """
         Track item
+
+        :param item
+        :type item: SequenceItem
+        :return None
         """
         if item.get_idunq():
             self._unique_ids_[item.get_id()] += 1
@@ -99,11 +108,13 @@ class Driver(avl.Driver):
 
         raise NotImplementedError("Reset method must be implemented in subclasses")
 
-    async def wait_on_rate(self, rate) -> None:
+    async def wait_on_rate(self, rate : float) -> None:
         """
         Wait based on a rate
 
         :param rate
+        :type rate: float
+        :return: None
         """
         while random.random() > rate:
             await RisingEdge(self.i_f.aclk)
@@ -144,6 +155,7 @@ class Driver(avl.Driver):
 
         :param item: The sequence item containing the values to drive
         :type item: SequenceItem
+        :return: None
         """
         raise NotImplementedError("Drive method must be implemented in subclasses")
 
@@ -165,6 +177,7 @@ class Driver(avl.Driver):
 
         :param item: The sequence item containing the values to drive
         :type item: SequenceItem
+        :return: None
         """
         raise NotImplementedError("Drive method must be implemented in subclasses")
 
@@ -216,7 +229,6 @@ class Driver(avl.Driver):
         This method is called during the run phase of the simulation.
         It is responsible for driving the request signals based on the sequencer's items.
 
-        :raises NotImplementedError: If the run phase is not implemented.
         """
 
         while True:
@@ -232,4 +244,5 @@ class Driver(avl.Driver):
             for t in self.tasks:
                 if not t.done():
                     t.cancel()
+
 __all__ = ["Driver"]

@@ -6,15 +6,12 @@
 import random
 
 import avl
-
 import cocotb
 from cocotb.triggers import RisingEdge
 
 from ._driver import Driver
 from ._item import SequenceItem, WriteItem
-from ._signals import *
-from ._utils import *
-from ._types import *
+from ._signals import aw_m_signals, aw_s_signals, b_s_signals, w_m_signals, w_s_signals
 
 
 class SubordinateWriteDriver(Driver):
@@ -92,11 +89,20 @@ class SubordinateWriteDriver(Driver):
                 self._srdrv_.responseQ.append(item)
 
     async def quiesce_control(self) -> None:
+        """
+        Quiesce the control signals by setting them to their default values.
+        This method is called after a control transaction is completed.
+
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in aw_s_signals:
             self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
-
+        """
+        Drive the control signals by waiting for valid signals and then setting the ready signals.
+        This method runs in an infinite loop and should be started as a separate coroutine.
+        """
         self.controlQ.clear()
         self.tasks.append(cocotb.start_soon(self._wait_for_data_()))
         while True:
@@ -127,10 +133,20 @@ class SubordinateWriteDriver(Driver):
             self.controlQ.append(item)
 
     async def quiesce_data(self) -> None:
+        """
+        Quiesce the data signals by setting them to their default values.
+        This method is called after a data transaction is completed.
+
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in w_s_signals:
             self.i_f.set(s, 0)
 
     async def drive_data(self) -> None:
+        """
+        Drive the data signals by waiting for valid signals and then setting the ready signals.
+        This method runs in an infinite loop and should be started as a separate coroutine.
+        """
         self.dataQ.clear()
         while True:
             self.i_f.set("wready", 0)
@@ -156,11 +172,19 @@ class SubordinateWriteDriver(Driver):
             await self.quiesce_data()
 
     async def quiesce_response(self) -> None:
+        """
+        Quiesce the response signals by setting them to their default values.
+        This method is called after a response transaction is completed.
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in b_s_signals:
             self.i_f.set(s, 0)
 
     async def drive_response(self) -> None:
-
+        """
+        Drive the response signals by waiting for valid signals and then setting the ready signals.
+        This method runs in an infinite loop and should be started as a separate coroutine.
+        """
         self.responseQ.clear()
         while True:
             while not self.responseQ or self.i_f.get("arestn") == 0 or self.i_f.get("awakeup", default=1) == 0:
@@ -193,8 +217,17 @@ class SubordinateWriteDriver(Driver):
             await self. quiesce_response()
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
+        """
+        Get the next item to be processed.
+        This method can be overridden in subclasses to modify the item before it is processed.
+
+        :param item: The item to be processed
+        :type item: SequenceItem
+        :return: The item to be processed
+        :rtype: SequenceItem
+        """
         if not isinstance(item, WriteItem):
-            raise ValueError(f"get_next_item() - expected type WriteItem")
+            raise ValueError("get_next_item() - expected type WriteItem")
 
         return item
 

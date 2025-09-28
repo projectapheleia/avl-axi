@@ -3,10 +3,13 @@
 # Description:
 # Apheleia Verification Library Coverage
 
-import avl
-from ._item import WriteItem, ReadItem
-from ._types import *
 from typing import Any
+
+import avl
+
+from ._item import ReadItem, WriteItem
+from ._types import axi_atomic_t, axi_burst_t, axi_domain_t, axi_resp_t, axi_secsid_t
+
 
 class Coverage(avl.Component):
 
@@ -20,7 +23,6 @@ class Coverage(avl.Component):
         :type parent: Component
         """
         super().__init__(name, parent)
-        i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
 
         self.item_port = avl.List()
 

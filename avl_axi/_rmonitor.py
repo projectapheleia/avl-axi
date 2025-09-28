@@ -3,13 +3,14 @@
 # Description:
 # Apheleia Verification Library Monitor
 
+import asyncio
+
 import avl
 import cocotb
 from cocotb.triggers import FallingEdge, RisingEdge
-import asyncio
 
 from ._item import ReadItem
-from ._signals import *
+from ._signals import ar_m_signals, r_s_signals
 
 
 class ReadMonitor(avl.Monitor):
@@ -55,7 +56,7 @@ class ReadMonitor(avl.Monitor):
             cnt = None
             while True:
                 if self.i_f.get("arvalid", default=0) and self.i_f.get("awakeup", default=1):
-                    if cnt == None:
+                    if cnt is None:
                         cnt = 0
                     else:
                         cnt += 1

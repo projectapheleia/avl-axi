@@ -1,19 +1,19 @@
 from ._agent import Agent
 from ._agent_cfg import AgentCfg
 from ._bandwidth import Bandwidth
-from ._swdriver import SubordinateWriteDriver, SubordinateWriteMemoryDriver
-from ._srdriver import SubordinateReadDriver, SubordinateReadRandomDriver, SubordinateReadMemoryDriver
 from ._coverage import Coverage
-from ._item import SequenceItem, WriteItem, ReadItem
-from ._wmonitor import WriteMonitor
-from ._rmonitor import ReadMonitor
-from ._mwdriver import ManagerWriteDriver
+from ._emonitor import ExclusivityMonitor
+from ._item import ReadItem, SequenceItem, WriteItem
 from ._mrdriver import ManagerReadDriver
 from ._msequence import ManagerSequence
-from ._types import axi_burst_t, axi_resp_t
-from ._emonitor import ExclusivityMonitor
-from ._smemory import SubordinateMemory
 from ._mwakedriver import ManagerWakeDriver
+from ._mwdriver import ManagerWriteDriver
+from ._rmonitor import ReadMonitor
+from ._smemory import SubordinateMemory
+from ._srdriver import SubordinateReadDriver, SubordinateReadMemoryDriver, SubordinateReadRandomDriver
+from ._swdriver import SubordinateWriteDriver, SubordinateWriteMemoryDriver
+from ._types import axi_burst_t, axi_resp_t
+from ._wmonitor import WriteMonitor
 
 # Add version
 __version__: str = "0.1.0"
@@ -35,7 +35,7 @@ __all__ = [
     "ReadMonitor",
     "ManagerWriteDriver",
     "ManagerReadDriver",
-    "ManagerWakeDriver"
+    "ManagerWakeDriver",
     "ManagerSequence",
     "axi_burst_t",
     "axi_resp_t",

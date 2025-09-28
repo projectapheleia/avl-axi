@@ -7,7 +7,7 @@ import random
 
 import avl
 
-from ._item import *
+from ._item import ReadItem, SequenceItem, WriteItem
 
 
 class ManagerSequence(avl.Sequence):
@@ -33,18 +33,50 @@ class ManagerSequence(avl.Sequence):
         """Default phase to wait on after a item sent to driver before next item"""
 
     def done_cb(self, *args, **kwargs):
+        """
+        Callback on item done event
+
+        :param args: Arguments
+        :param kwargs: Keyword arguments
+        """
         pass
 
     def control_cb(self, *args, **kwargs):
+        """
+        Callback on item control event
+
+        :param args: Arguments
+        :param kwargs: Keyword arguments
+        """
         pass
 
     def data_cb(self, *args, **kwargs):
+        """
+        Callback on item data event
+
+        :param args: Arguments
+        :param kwargs: Keyword arguments
+        """
         pass
 
     def response_cb(self, *args, **kwargs):
+        """
+        Callback on item response event
+
+        :param args: Arguments
+        :param kwargs: Keyword arguments
+        """
         self.get_sequencer().drop_objection()
 
     async def _send_(self, item : SequenceItem, randomize : bool = True, wait_for : str = None) -> SequenceItem:
+        """
+        Send an item to the driver
+
+        :param item: Item to send
+        :param randomize: Randomize the item before sending (default True)
+        :param wait_for: Phase to wait on after item sent to driver before next item (default None)
+        :return: The item sent
+        """
         self.get_sequencer().raise_objection()
 
         item.add_event("done", self.done_cb)
@@ -64,11 +96,20 @@ class ManagerSequence(avl.Sequence):
         return item
 
     async def next(self) -> SequenceItem:
+        """
+        Get the next item in the sequence
+        """
 
         item = random.choice([WriteItem(f"from_{self.name}", self), ReadItem(f"from_{self.name}", self)])
         return await self._send_(item, wait_for=self.wait_for)
 
     async def write(self, **kwargs) -> WriteItem:
+        """
+        Send a write item to the driver
+
+        :param kwargs: Keyword arguments to set on the item
+        :return: The item sent
+        """
         item = WriteItem(f"from_{self.name}", self)
 
         for k,v in kwargs.items():
@@ -83,6 +124,12 @@ class ManagerSequence(avl.Sequence):
         return await self._send_(item, randomize=False, wait_for=wait_for)
 
     async def read(self, **kwargs) -> ReadItem:
+        """
+        Send a read item to the driver
+
+        :param kwargs: Keyword arguments to set on the item
+        :return: The item sent
+        """
         item = ReadItem(f"from_{self.name}", self)
 
         for k,v in kwargs.items():

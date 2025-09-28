@@ -8,6 +8,7 @@ import avl
 import avl_axi
 import cocotb
 
+
 class CustomWrite(avl_axi.WriteItem):
 
     def __init__(self, name, parent=None):
@@ -43,12 +44,7 @@ class example_env(avl.Env):
 @cocotb.test
 async def test(dut):
     """
-    Example Simple interface
-        - AXI5-Lite (no bursts)
-        - 3 bit read and write ids
-        - Random data
-        - Manager control delays (short write, long read)
-        - 100 items mix of read and write
+    Example AXI5 Interface with bandwidth monitoring
 
     :param dut: The DUT instance
     :return: None

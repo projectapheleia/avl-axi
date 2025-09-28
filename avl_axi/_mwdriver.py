@@ -3,15 +3,14 @@
 # Description:
 # Apheleia Verification Library Driver
 
-import random
 
 import avl
 import cocotb
 from cocotb.triggers import RisingEdge
 
 from ._driver import Driver
-from ._item import SequenceItem
-from ._signals import *
+from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
+
 
 class ManagerWriteDriver(Driver):
 
@@ -57,10 +56,21 @@ class ManagerWriteDriver(Driver):
             self.i_f.set(s, 0)
 
     async def quiesce_control(self) -> None:
+        """
+        Quiesce the control signals by setting them to their default values.
+        This method is called to ensure that the control signals are in a known state.
+
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
+
         for s in aw_m_signals:
             self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
+        """
+        Drive the control signals based on the items in the control queue.
+        This method is responsible for driving the control signals according to the protocol.
+        """
 
         self.controlQ = []
         while True:
@@ -115,11 +125,19 @@ class ManagerWriteDriver(Driver):
             item.set_event("control", item)
 
     async def quiesce_data(self) -> None:
+        """
+        Quiesce the data signals by setting them to their default values.
+        This method is called to ensure that the data signals are in a known state.
+        By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
+        """
         for s in w_m_signals:
             self.i_f.set(s, 0)
 
     async def drive_data(self) -> None:
-
+        """
+        Drive the data signals based on the items in the data queue.
+        This method is responsible for driving the data signals according to the protocol.
+        """
         self.dataQ = []
         while True:
 
@@ -157,11 +175,20 @@ class ManagerWriteDriver(Driver):
             item.set_event("data", item)
 
     async def quiesce_response(self) -> None:
+        """
+        Quiesce the response signals by setting them to their default values.
+        This method is called to ensure that the response signals are in a known state.
+        By default 0's all signals - can be overridden in subclasses to add randomization or
+        other behavior.
+        """
         for s in b_m_signals:
             self.i_f.set(s, 0)
 
     async def drive_response(self):
-
+        """
+        Drive the response signals based on the items in the response queue.
+        This method is responsible for driving the response signals according to the protocol.
+        """
         for k in self.responseQ.keys():
             self.responseQ[k] = []
         while True:
