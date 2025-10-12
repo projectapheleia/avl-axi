@@ -172,6 +172,8 @@ class WriteMonitor(avl.Monitor):
         :raises NotImplementedError: If the run phase is not implemented.
         """
 
+        await self.wait_on_reset()
+
         while True:
 
             tasks = []

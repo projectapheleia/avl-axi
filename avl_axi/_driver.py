@@ -130,7 +130,11 @@ class Driver(avl.Driver):
         try:
             await FallingEdge(self.i_f.aresetn)
             await self.reset()
-            self._unique_ids_ = {}
+
+            for i in range(2**max(self.i_f.ID_R_WIDTH, self.i_f.ID_W_WIDTH)):
+                self._unique_ids_[i] = 0
+                self._tag_ids_[i] = 0
+
             self._outstanding_transactions_ = 0
         except asyncio.CancelledError:
             raise

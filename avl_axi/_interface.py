@@ -7,6 +7,97 @@ from typing import Any
 
 from cocotb.handle import HierarchyObject
 
+parameters = [
+    "CLASSIFICATION",
+    "VERSION",
+    "ADDR_WIDTH",
+    "ARSNOOP_WIDTH",
+    "AWCMO_WIDTH",
+    "AWSNOOP_WIDTH",
+    "BRESP_WIDTH",
+    "DATA_WIDTH",
+    "ID_R_WIDTH",
+    "ID_W_WIDTH",
+    "LOOP_R_WIDTH",
+    "LOOP_W_WIDTH",
+    "MECID_WIDTH",
+    "MPAM_WIDTH",
+    "RCHUNKNUM_WIDTH",
+    "RCHUNKSTRB_WIDTH",
+    "RRESP_WIDTH",
+    "SECSID_WIDTH",
+    "SID_WIDTH",
+    "SSID_WIDTH",
+    "SUBSYSID_WIDTH",
+    "USER_DATA_WIDTH",
+    "USER_REQ_WIDTH",
+    "USER_RESP_WIDTH",
+    "Atomic_Transactions",
+    "Busy_Support",
+    "BURST_Present",
+    "CACHE_Present",
+    "Cache_Line_Size",
+    "Cache_Stash_Transactions",
+    "CMO_On_Read",
+    "CMO_On_Write",
+    "Coherency_Connection_Signals",
+    "Consistent_DECERR",
+    "DeAllocation_Transactions",
+    "Device_Normal_Independence",
+    "DVM_Message_Support",
+    "DVM_v8",
+    "DVM_v8_1",
+    "DVM_v8_4",
+    "DVM_v9_2",
+    "Exclusive_Accesses",
+    "Fixed_Burst_Disable",
+    "InvalidateHint_Transaction",
+    "LEN_Present",
+    "Loopback_Signals",
+    "Max_Transaction_Bytes",
+    "MEC_Support",
+    "MMUFLOW_Present",
+    "MPAM_Support",
+    "MTE_Support",
+    "Multi_Copy_Atomicity",
+    "NSAccess_Identifiers",
+    "Ordered_Write_Observation",
+    "PBHA_Support",
+    "Persist_CMO",
+    "Poison",
+    "Prefetch_Transaction",
+    "PROT_Present",
+    "QoS_Accept",
+    "QOS_Present",
+    "Read_Data_Chunking",
+    "Read_Interleaving_Disabled",
+    "REGION_Present",
+    "Regular_Transactions_Only",
+    "RLAST_Present",
+    "RME_Support",
+    "Shareable_Cache_Support",
+    "Shareable_Transactions",
+    "SIZE_Present",
+    "STASHLPID_Present",
+    "STASHNID_Present",
+    "Trace_Signals",
+    "Unique_ID_Support",
+    "UnstashTranslation_Transaction",
+    "Untranslated_Transactions",
+    "Wakeup_Signals",
+    "WLAST_Present",
+    "Write_Plus_CMO",
+    "WriteDeferrable_Transaction",
+    "WriteNoSnoopFull_Transaction",
+    "WriteZero_Transaction",
+    "WSTRB_Present",
+    "STRB_WIDTH",
+    "RUSER_WIDTH",
+    "CMO_WIDTH",
+    "TAG_WIDTH",
+    "TAGUPDATE_WIDTH",
+    "POISON_WIDTH",
+]
 
 class Interface:
     def __init__(self, hdl : HierarchyObject) -> None: # noqa: C901
@@ -18,15 +109,19 @@ class Interface:
         :type hdl: HierarchyObject
         :return: None
         """
-        # Parameters and Signals
-        for child in list(hdl):
-            # Parameters start with a capital letter
-            if child._name[0].isupper():
-                if isinstance(child.value, bytes):
-                    setattr(self, child._name, str(child.value.decode("utf-8")))
-                else:
-                    setattr(self, child._name, int(child.value))
+        # Parameters
+        for p in parameters:
+            # Parameters not exposed by list() in some simulators - look up explicitly
+            v = getattr(hdl, p)
+            if isinstance(v.value, bytes):
+                setattr(self, p, str(v.value.decode("utf-8")))
             else:
+                setattr(self, p, int(v.value))
+
+        # Signals
+        for child in list(hdl):
+            # Signals start with a lowercase letter
+            if not child._name[0].isupper():
                 setattr(self, child._name, child)
 
         if self.CLASSIFICATION != "AXI":
