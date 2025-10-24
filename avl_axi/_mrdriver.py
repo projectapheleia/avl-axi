@@ -172,7 +172,18 @@ class ManagerReadDriver(Driver):
                 delattr(item, "_rcnt_")
                 self.response_pending -= 1
                 self.responseQ[rid].pop(0)
-                item.set_event("response", item)
+
+                # Inform sequence response phase is complete
+                # Extra checks for items which have both r and b responses (atomics)
+                # Only call response callback when all completed
+                if not item.has_bresp():
+                    item.set_event("response", item)
+                else:
+                    if hasattr(item, "_bresp_complete_"):
+                        delattr(item, "_bresp_complete_")
+                        item.set_event("response", item)
+                    else:
+                        setattr(item, "_rresp_complete_", True)
 
             await self.quiesce_response()
 

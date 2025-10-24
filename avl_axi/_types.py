@@ -331,13 +331,25 @@ class axi_atomic_t(avl.Logic):
         """
         Returns True if the operation generates a BRESP response, False otherwise.
 
+        Currently all atomic operations return bresp - however implementing explicitly
+        for symmetry and future proofing
+
         :return: bool
         :rtype: bool
         """
-        if self.value & 0b100000 == 0:
+        return True
+
+    def has_rresp(self) -> bool:
+        """
+        Returns True if the operation generates a RRESP response, False otherwise.
+
+        :return: bool
+        :rtype: bool
+        """
+        if self.value & 0b100000 != 0:
             return True
-        else:
-            return False
+
+        return False
 
     def endianness(self) -> str:
         """

@@ -83,6 +83,7 @@ class Agent(avl.Agent):
         if self.cfg.has_monitor:
             self.wmonitor = WriteMonitor("wmonitor", self)
             self.rmonitor = ReadMonitor("rmonitor", self)
+            self.wmonitor._mrmon_ = self.rmonitor
 
 
             if self.cfg.has_coverage:

@@ -347,12 +347,6 @@ class Coverage(avl.Component):
         # RRESP
         self.add_coverpoint(self.cg, "rresp") # Use bitwise as a list
 
-        # RUSER
-        self.add_coverpoint(self.cg, "ruser")
-
-        # RTRACE
-        self.add_coverpoint(self.cg, "rtrace")
-
         # RLOOP
         self.add_coverpoint(self.cg, "rloop")
 

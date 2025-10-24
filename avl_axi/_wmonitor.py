@@ -27,11 +27,24 @@ class WriteMonitor(avl.Monitor):
 
         self.i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
 
+        # Manager Read Monitor
+        self._mrmon_ = None
+
         self.dataQ = avl.List()
         self.controlQ = avl.List()
         self.responseQ = {}
         for i in range(2**self.i_f.ID_W_WIDTH):
             self.responseQ[i] = avl.List()
+
+    def reset(self) -> None:
+        """
+        Reset the monitor state
+        """
+
+        self.dataQ.clear()
+        self.controlQ.clear()
+        for i in range(2**self.i_f.ID_W_WIDTH):
+            self.responseQ[i].clear()
 
     async def wait_on_reset(self) -> None:
         """
@@ -43,7 +56,7 @@ class WriteMonitor(avl.Monitor):
 
         try:
             await FallingEdge(self.i_f.aresetn)
-            await self.reset()
+            self.reset()
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -102,6 +115,9 @@ class WriteMonitor(avl.Monitor):
             item.resize()
             item.set_event("control")
             self.controlQ.append(item)
+            if item.has_rresp():
+                self._mrmon_.responseQ[item.get_id()].append(item)
+
             await RisingEdge(self.i_f.aclk)
 
     async def monitor_data(self) -> None:
@@ -157,8 +173,16 @@ class WriteMonitor(avl.Monitor):
             item.sanity()
 
             # Export
-            item.set_event("response")
-            self.item_export.write(item)
+            if not item.has_rresp():
+                item.set_event("response")
+                self.item_export.write(item)
+            else:
+                if hasattr(item, "_rresp_complete_"):
+                    delattr(item, "_rresp_complete_")
+                    item.set_event("response")
+                    self.item_export.write(item)
+                else:
+                    setattr(item, "_bresp_complete_", True)
 
             # Wait for next edge
             await RisingEdge(self.i_f.aclk)
@@ -172,7 +196,7 @@ class WriteMonitor(avl.Monitor):
         :raises NotImplementedError: If the run phase is not implemented.
         """
 
-        await self.wait_on_reset()
+        self.reset()
 
         while True:
 

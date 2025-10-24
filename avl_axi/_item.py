@@ -63,7 +63,7 @@ class SequenceItem(avl.SequenceItem):
         # Re-Size Read Data
         for s in r_s_signals + ["r_wait_cycles"]:
             if hasattr(self, s):
-                if self.has_bresp():
+                if not self.has_rresp():
                     delattr(self, s)
                 else:
                     lst = getattr(self, s)
@@ -129,7 +129,7 @@ class SequenceItem(avl.SequenceItem):
             assert self.get_trace() == self.get("btrace", default=0)
             assert self.get_idunq() == self.get("bidunq", default=0)
 
-        else:
+        if self.has_rresp():
             for i in range(self.get_len()+1):
                 # Signals which must match command -> response
                 assert self.get_id()    == self.get("rid", default=0, idx=i)
@@ -313,17 +313,27 @@ class SequenceItem(avl.SequenceItem):
 
     def has_bresp(self) -> bool:
         """
-        Which response channels to expect
-            - True = BRESP
-            - False = RRESP
+        Expect a response on bresp channel
         """
 
-        if hasattr(self, "araddr"):
-            return False
-        elif hasattr(self, "awatop"):
+        if hasattr(self, "awatop"):
             return self.awatop.has_bresp()
-        else:
+        elif hasattr(self, "awaddr"):
             return True
+
+        return False
+
+    def has_rresp(self) -> bool:
+        """
+        Expect a response on resp channel
+        """
+
+        if hasattr(self, "awatop"):
+            return self.awatop.has_rresp()
+        elif hasattr(self, "araddr"):
+            return True
+
+        return False
 
 class WriteItem(SequenceItem):
     def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901

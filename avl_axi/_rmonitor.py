@@ -28,6 +28,16 @@ class ReadMonitor(avl.Monitor):
         self.i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
 
         self.responseQ = {}
+        for i in range(2**self.i_f.ID_R_WIDTH):
+            self.responseQ[i] = avl.List()
+
+    def reset(self) -> None:
+        """
+        Reset the monitor state
+        """
+
+        for i in range(2**self.i_f.ID_R_WIDTH):
+            self.responseQ[i].clear()
 
     async def wait_on_reset(self) -> None:
         """
@@ -39,7 +49,7 @@ class ReadMonitor(avl.Monitor):
 
         try:
             await FallingEdge(self.i_f.aresetn)
-            await self.reset()
+            self.reset()
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -77,7 +87,6 @@ class ReadMonitor(avl.Monitor):
         Monitor the AXI Write Response Bus
         """
 
-        self.responseQ[id] = avl.List()
         while True:
             item = await self.responseQ[id].blocking_pop()
 
@@ -98,11 +107,12 @@ class ReadMonitor(avl.Monitor):
                 item.set("r_wait_cycles", cnt, idx=i)
 
                 # Reduced data phase
-                for s in ["rdata", "rresp", "ruser", "rpoison", "rtrace", "rloop"]:
-                    if hasattr(item, s):
-                        [_or_, _and_] = getattr(item, f"_{s}_")
-                        _or_  |= item.get(s, idx=i)
-                        _and_ &= item.get(s, idx=i)
+                if not hasattr(item, "awaddr"):
+                    for s in ["rdata", "rresp", "ruser", "rpoison", "rtrace", "rloop"]:
+                        if hasattr(item, s):
+                            [_or_, _and_] = getattr(item, f"_{s}_")
+                            _or_  |= item.get(s, idx=i)
+                            _and_ &= item.get(s, idx=i)
 
 
                 if i == item.get_len():
@@ -110,8 +120,19 @@ class ReadMonitor(avl.Monitor):
                     item.sanity()
 
                     # Export
-                    item.set_event("response")
-                    self.item_export.write(item)
+                    # Inform sequence response phase is complete
+                    # Extra checks for items which have both r and b responses (atomics)
+                    # Only call response callback when all completed
+                    if not item.has_bresp():
+                        item.set_event("response", item)
+                        self.item_export.write(item)
+                    else:
+                        if hasattr(item, "_bresp_complete_"):
+                            delattr(item, "_bresp_complete_")
+                            item.set_event("response", item)
+                            self.item_export.write(item)
+                        else:
+                            setattr(item, "_rresp_complete_", True)
 
                 # Wait for next edge
                 await RisingEdge(self.i_f.aclk)
@@ -126,7 +147,7 @@ class ReadMonitor(avl.Monitor):
         :raises NotImplementedError: If the run phase is not implemented.
         """
 
-        await self.wait_on_reset()
+        self.reset()
 
         while True:
 

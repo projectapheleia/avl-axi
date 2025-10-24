@@ -25,7 +25,7 @@ class ManagerWriteDriver(Driver):
         """
         super().__init__(name, parent)
 
-        # Manager Write Driver
+        # Manager Read Driver
         self._mrdrv_ = None
 
         # Items Queues
@@ -214,9 +214,20 @@ class ManagerWriteDriver(Driver):
 
             await self.quiesce_response()
 
-            # Inform sequence response phase is complete
-            item.set_event("response", item)
+            # Decrement outstanding response counter
             self.response_pending -= 1
+
+            # Inform sequence response phase is complete
+            # Extra checks for items which have both r and b responses (atomics)
+            # Only call response callback when all completed
+            if not item.has_rresp():
+                item.set_event("response", item)
+            else:
+                if hasattr(item, "_rresp_complete_"):
+                    delattr(self, "_rresp_complete_")
+                    item.set_event("response", item)
+                else:
+                    setattr(item, "_bresp_complete_", True)
 
     async def run_phase(self):
         """
@@ -246,7 +257,8 @@ class ManagerWriteDriver(Driver):
             if item.has_bresp():
                 self.responseQ[id].append(item)
                 self.response_pending += 1
-            else:
+
+            if item.has_rresp():
                 self._mrdrv_.responseQ[id].append(item)
                 self._mrdrv_.response_pending += 1
 

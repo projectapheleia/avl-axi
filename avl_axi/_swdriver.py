@@ -82,10 +82,11 @@ class SubordinateWriteDriver(Driver):
             if self.memory is not None:
                 self.memory.process_write(item)
 
-            # Send item to write response phase
+            # Send item to response phases
             if item.has_bresp():
                 self.responseQ.append(item)
-            else:
+
+            if item.has_rresp():
                 self._srdrv_.responseQ.append(item)
 
     async def quiesce_control(self) -> None:
