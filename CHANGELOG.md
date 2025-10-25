@@ -1,5 +1,7 @@
 # Changelog
 
+[v0.2.1] - 2025-10-25
+
 ### Fixed
  - [#3] (https://github.com/projectapheleia/avl-axi/issues/3) AVL_AXI coverage init issue
  - [#4] (https://github.com/projectapheleia/avl-axi/issues/4) AXI5 ATOPs should always respond on the B channel

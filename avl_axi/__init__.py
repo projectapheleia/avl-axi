@@ -16,7 +16,7 @@ from ._types import axi_burst_t, axi_resp_t
 from ._wmonitor import WriteMonitor
 
 # Add version
-__version__: str = "0.2.0"
+__version__: str = "0.2.1"
 
 __all__ = [
     "Agent",
