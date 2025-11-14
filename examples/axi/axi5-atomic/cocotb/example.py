@@ -8,7 +8,8 @@ import avl
 import avl_axi
 import cocotb
 from avl_axi._types import axi_atomic_t, axi_resp_t
-
+from avl_axi._item import WriteItem
+from z3 import UGE, ULE, And
 
 class DirectedSequence(avl_axi.ManagerSequence):
     async def body(self) -> None:
@@ -126,6 +127,14 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3, arlen=7, arburst=1)
         assert rsp.rresp == [axi_resp_t.OKAY]*8 and rsp.rdata == [0xaa01,0xaa02,0xaa03,0xaa04,0xaa05,0xaa06,0xaa07,0xaa08]
+
+        # Test : Randomization
+        for _ in range(5):
+            item = WriteItem(f"from_{self.name}", self)
+            item.add_constraint("_c_is_atomic_", lambda x : x != axi_atomic_t.NON_ATOMIC, item.awatop)
+            item.add_constraint("_c_in_range_", lambda x : And(UGE(x, 0x0000), ULE(x, 0x1000)), item.awaddr)
+            rsp = await self._send_(item, wait_for=self.wait_for)
+            assert rsp.bresp == axi_resp_t.OKAY
 
 class example_env(avl.Env):
 

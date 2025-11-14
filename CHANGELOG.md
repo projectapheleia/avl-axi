@@ -1,5 +1,10 @@
 # Changelog
 
+[v0.2.2] - 2025-11-14
+
+### Fixed
+ - [#6] (https://github.com/projectapheleia/avl-axi/issues/6) [item] c_awatop_size constraint issue
+
 [v0.2.1] - 2025-10-25
 
 ### Fixed

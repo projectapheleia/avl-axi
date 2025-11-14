@@ -430,7 +430,8 @@ class WriteItem(SequenceItem):
             self.add_constraint("c_max_transaction_bytes", lambda y : ULE(1 << ZeroExt(13, y), BitVecVal(i_f.Max_Transaction_Bytes,16)), self.awsize)
 
         if hasattr(self, "awatop"):
-            self.add_constraint("c_awatop_size", lambda x,y : Implies(y != axi_atomic_t.ATOMIC_NON_ATOMIC, And(UGE(x,1), ULE(x,5))), self.awatop, self.awsize)
+            self.add_constraint("c_awatop_legal", lambda x: Or(*(x == v for v in self.awatop.values())), self.awatop)
+            self.add_constraint("c_awatop_size", lambda x,y : Implies(x != axi_atomic_t.NON_ATOMIC, ULE(y,5)), self.awatop, self.awsize)
 
         if hasattr(self, "swstashniden"):
             self.add_constraint("c_swstashnid", lambda x,y : Implies(y == 0, x == 0), self.awstashniden, self.awstashnid)
