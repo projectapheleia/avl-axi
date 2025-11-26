@@ -90,8 +90,13 @@ class ManagerWriteDriver(Driver):
             await self.wait_on_rate(self.control_rate_limit())
 
             # Unique ID
-            while self._unique_ids_[item.get_id()] > 0:
-                await RisingEdge(self.i_f.aclk)
+            if item.get_idunq():
+                while self._unique_ids_[item.get_id()] > 0:
+                    await RisingEdge(self.i_f.aclk)
+
+                if hasattr(item, "awatop"):
+                    while self._mrdrv_._unique_ids_[item.get_id()] > 0:
+                        await RisingEdge(self.i_f.aclk)
 
             # TAG Unique ID
             if item.get_tagop() != 0:

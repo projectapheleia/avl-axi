@@ -70,9 +70,9 @@ class SequenceItem(avl.SequenceItem):
                     setattr(self, s, lst[:n])
 
         # Force IDs, loop to match
-        if hasattr(self, "bid") :
+        if hasattr(self, "bid"):
             self.set("bid", self.get("awid", default=0))
-        if hasattr(self, "bloop") :
+        if hasattr(self, "bloop"):
             self.set("bloop", self.get("awloop", default=0))
         if hasattr(self, "btrace"):
             self.set("btrace", self.get("awtrace", default=0))
@@ -80,14 +80,14 @@ class SequenceItem(avl.SequenceItem):
             self.set("bidunq", self.get("awidunq"))
 
         for i in range(n):
-            if hasattr(self, "rid") :
+            if hasattr(self, "rid"):
                 self.set("rid", self.get_id(), idx=i)
-            if hasattr(self, "rloop") :
+            if hasattr(self, "rloop"):
                 self.set("rloop", self.get("arloop", default=0), idx=i)
-            if hasattr(self, "rtrace") :
+            if hasattr(self, "rtrace"):
                 self.set("rtrace", self.get("artrace", default=0), idx=i)
-            if hasattr(self, "ridunq") :
-                self.set("ridunq", self.get("aridunq", default=0), idx=i)
+            if hasattr(self, "ridunq"):
+                self.set("ridunq", self.get_idunq(), idx=i)
 
     def sanity(self) -> None:
         """
@@ -240,7 +240,9 @@ class SequenceItem(avl.SequenceItem):
 
         :return: ID Unique (awidunq, aridunq)
         """
-        if hasattr(self, "awaddr"):
+        if hasattr(self, "awatop"):
+            return 1
+        elif hasattr(self, "awaddr"):
             return int(self.get("awidunq", default=0))
         else:
             return int(self.get("aridunq", default=0))

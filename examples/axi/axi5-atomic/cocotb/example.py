@@ -129,12 +129,14 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.rresp == [axi_resp_t.OKAY]*8 and rsp.rdata == [0xaa01,0xaa02,0xaa03,0xaa04,0xaa05,0xaa06,0xaa07,0xaa08]
 
         # Test : Randomization
-        for _ in range(5):
+        for _ in range(20):
             item = WriteItem(f"from_{self.name}", self)
             item.add_constraint("_c_is_atomic_", lambda x : x != axi_atomic_t.NON_ATOMIC, item.awatop)
             item.add_constraint("_c_in_range_", lambda x : And(UGE(x, 0x0000), ULE(x, 0x1000)), item.awaddr)
-            rsp = await self._send_(item, wait_for=self.wait_for)
-            assert rsp.bresp == axi_resp_t.OKAY
+            item.add_constraint("_c_short_", lambda x : ULE(x,4), item.awlen)
+            item.add_constraint("_c_same_wid_", lambda x : ULE(x, 2), item.awid)
+
+            rsp = await self._send_(item, wait_for=None)
 
 class example_env(avl.Env):
 

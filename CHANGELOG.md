@@ -1,5 +1,10 @@
 # Changelog
 
+### Fixed
+ - [#7] (https://github.com/projectapheleia/avl-axi/issues/7) Sequence: Sequence only waits on last item. Can complete early on out-of-order responses
+ - [#8] (https://github.com/projectapheleia/avl-axi/issues/8) Atomics: Randomization of atomics can break single outstanding ID requirements
+ - [#9] (https://github.com/projectapheleia/avl-axi/issues/9) SMemory : Endianness swap can overflow
+
 [v0.2.2] - 2025-11-14
 
 ### Fixed

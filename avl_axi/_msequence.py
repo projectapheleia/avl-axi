@@ -32,6 +32,9 @@ class ManagerSequence(avl.Sequence):
         self.wait_for = avl.Factory.get_variable(f"{self.get_full_name}.wait_for", None)
         """Default phase to wait on after a item sent to driver before next item"""
 
+        self._items_ = []
+        """Executed items. Used to track end of sequence"""
+
     def done_cb(self, *args, **kwargs):
         """
         Callback on item done event
@@ -90,6 +93,9 @@ class ManagerSequence(avl.Sequence):
         else:
             item.resize()
         await self.finish_item(item)
+
+        # Track
+        self._items_.append(item)
 
         if wait_for is not None:
             await item.wait_on_event(wait_for)
@@ -152,7 +158,15 @@ class ManagerSequence(avl.Sequence):
         for _ in range(self.n_items):
             item = await self.next()
 
-        # Wait for response from final item
-        await item.wait_on_event("response")
+    async def post_body(self) -> None:
+        """
+        Wait for all items to have seen response
+        """
+        await super().post_body()
+
+        for item in self._items_:
+            await item.wait_on_event("response")
+
+        self._items_.clear()
 
 __all__ = ["ManagerSequence"]

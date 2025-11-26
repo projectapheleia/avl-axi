@@ -78,6 +78,8 @@ class SubordinateMemory(avl.Memory):
         :param width: Bit width (e.g., 8, 16, 32)
         :return: Unsigned integer
         """
+        mask = (1 << (num_bytes * 8)) - 1
+        value &= mask
         b = value.to_bytes(num_bytes, byteorder="little", signed=False)
         return int.from_bytes(b[::-1], byteorder="little", signed=False)
 
