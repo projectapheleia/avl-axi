@@ -240,9 +240,7 @@ class SequenceItem(avl.SequenceItem):
 
         :return: ID Unique (awidunq, aridunq)
         """
-        if hasattr(self, "awatop"):
-            return 1
-        elif hasattr(self, "awaddr"):
+        if hasattr(self, "awaddr"):
             return int(self.get("awidunq", default=0))
         else:
             return int(self.get("aridunq", default=0))

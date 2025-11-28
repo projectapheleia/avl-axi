@@ -10,7 +10,7 @@ from cocotb.triggers import RisingEdge
 
 from ._driver import Driver
 from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
-
+from ._types import axi_atomic_t
 
 class ManagerWriteDriver(Driver):
 
@@ -90,13 +90,13 @@ class ManagerWriteDriver(Driver):
             await self.wait_on_rate(self.control_rate_limit())
 
             # Unique ID
-            if item.get_idunq():
+            if item.get_idunq() or item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
                 while self._unique_ids_[item.get_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
-                if hasattr(item, "awatop"):
-                    while self._mrdrv_._unique_ids_[item.get_id()] > 0:
-                        await RisingEdge(self.i_f.aclk)
+            if item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
+                while self._mrdrv_._unique_ids_[item.get_id()] > 0:
+                    await RisingEdge(self.i_f.aclk)
 
             # TAG Unique ID
             if item.get_tagop() != 0:
@@ -229,7 +229,7 @@ class ManagerWriteDriver(Driver):
                 item.set_event("response", item)
             else:
                 if hasattr(item, "_rresp_complete_"):
-                    delattr(self, "_rresp_complete_")
+                    delattr(item, "_rresp_complete_")
                     item.set_event("response", item)
                 else:
                     setattr(item, "_bresp_complete_", True)

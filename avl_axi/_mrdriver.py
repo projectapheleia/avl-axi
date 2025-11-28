@@ -10,6 +10,7 @@ from cocotb.triggers import RisingEdge
 
 from ._driver import Driver
 from ._signals import ar_m_signals, r_m_signals, r_s_signals
+from ._types import axi_atomic_t
 
 
 class ManagerReadDriver(Driver):
@@ -82,7 +83,7 @@ class ManagerReadDriver(Driver):
             await self.wait_on_rate(self.control_rate_limit())
 
             # Unique ID
-            if item.get_idunq():
+            if item.get_idunq() or item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
                 while self._unique_ids_[item.get_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
