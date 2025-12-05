@@ -40,12 +40,15 @@ class SequenceItem(avl.SequenceItem):
             if isinstance(v, (int | str)):
                 setattr(self, f"_{k}_", v)
 
-    def resize(self, size : int = None) -> None:
+    def resize(self, size : int = None, finalize : bool = False) -> None:
         """
         Re-size transaction data fields based on len
 
         :param size: New size of the transaction (len+1) - if None use current len+1
         :type size: int
+
+        :param finalize: Remove any un-used fields
+        :type finalize : bool
         :return: None
 
         """
@@ -63,7 +66,7 @@ class SequenceItem(avl.SequenceItem):
         # Re-Size Read Data
         for s in r_s_signals + ["r_wait_cycles"]:
             if hasattr(self, s):
-                if not self.has_rresp():
+                if not self.has_rresp() and finalize:
                     delattr(self, s)
                 else:
                     lst = getattr(self, s)
@@ -147,7 +150,7 @@ class SequenceItem(avl.SequenceItem):
         """
         super().post_randomize()
 
-        self.resize()
+        self.resize(finalize=True)
 
         # Force alignment for Regular Transaction - quicker than constraint
         if self._Regular_Transactions_Only_:

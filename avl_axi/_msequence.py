@@ -91,7 +91,7 @@ class ManagerSequence(avl.Sequence):
         if randomize:
             item.randomize()
         else:
-            item.resize()
+            item.resize(finalize=True)
         await self.finish_item(item)
 
         # Track

@@ -112,7 +112,7 @@ class WriteMonitor(avl.Monitor):
                 item.set(s, self.i_f.get(s, default=0))
             item.set("aw_wait_cycles", cnt)
 
-            item.resize()
+            item.resize(finalize=True)
             item.set_event("control")
             self.controlQ.append(item)
             if item.has_rresp():

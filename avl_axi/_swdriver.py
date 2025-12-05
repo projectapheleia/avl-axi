@@ -129,7 +129,7 @@ class SubordinateWriteDriver(Driver):
             # Populate Item with control data
             for s in aw_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
-            item.resize()
+            item.resize(finalize=True)
 
             self.controlQ.append(item)
 

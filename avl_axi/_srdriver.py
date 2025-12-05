@@ -98,7 +98,7 @@ class SubordinateReadDriver(Driver):
             # Send item to response phase
             for s in ar_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
-            item.resize()
+            item.resize(finalize=True)
 
             # Handle Memory Access
             if self.memory is not None:
@@ -135,7 +135,7 @@ class SubordinateReadDriver(Driver):
         Drive the response channel by sending read data transactions.
         This method runs in a loop, waiting for the appropriate conditions to send transactions.
         """
-        self.responseQ = avl.List()
+        self.responseQ.clear()
         while True:
             while not self.responseQ or self.i_f.get("aresetn") == 0 or self.i_f.get("awakeup", default=1) == 0:
                 await RisingEdge(self.i_f.aclk)
