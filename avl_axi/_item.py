@@ -12,6 +12,63 @@ from ._signals import ar_m_signals, aw_m_signals, b_s_signals, is_random, r_s_si
 from ._types import axi_atomic_t, axi_burst_t, axi_resp_t, signal_to_type
 
 
+class LazySignalList:
+    """Lazy initialization for signal lists - only creates objects when accessed. Used to replace the 256-long lists that are created for every read/write init"""
+    def __init__(self, factory, size=256):
+        self._factory = factory  # will hold the function we use to create new items
+        self._items = {}  # dictionary of items
+        self._size = size  # max length
+    
+    def __getitem__(self, idx):
+        # Handle slicing
+        if isinstance(idx, slice):
+            # Convert slice to range of indices
+            start, stop, step = idx.indices(self._size)
+            # Return a regular list with the sliced items
+            return [self[i] for i in range(start, stop, step)]
+        
+        # Handle single integer index
+        if idx >= self._size or idx < -self._size:
+            raise IndexError(f"Index {idx} out of range (0-{self._size-1})")
+        
+        # Handle negative indices
+        if idx < 0:
+            idx = self._size + idx
+        
+        if idx not in self._items:
+            self._items[idx] = self._factory()
+        
+        return self._items[idx]
+    
+    def __setitem__(self, idx, value):
+        # Handle slicing
+        if isinstance(idx, slice):
+            start, stop, step = idx.indices(self._size)
+            indices = range(start, stop, step)
+            if not hasattr(value, '__iter__'):
+                raise TypeError("can only assign an iterable")
+            for i, v in zip(indices, value):
+                self._items[i] = v
+            return
+        
+        # Handle single integer index
+        if idx >= self._size or idx < -self._size:
+            raise IndexError(f"Index {idx} out of range (0-{self._size-1})")
+        
+        # Handle negative indices
+        if idx < 0:
+            idx = self._size + idx
+        
+        self._items[idx] = value
+    
+    def __len__(self):
+        return self._size
+    
+    def __iter__(self):
+        for i in range(self._size):
+            yield self[i]
+
+
 class SequenceItem(avl.SequenceItem):
 
     def __init__(self, name: str, parent: avl.Component) -> None:
@@ -174,7 +231,7 @@ class SequenceItem(avl.SequenceItem):
         :return: None
         """
         signal = getattr(self, name, None)
-        if isinstance(signal, list):
+        if (isinstance(signal, list) or isinstance(signal, LazySignalList)):
             if idx is not None:
                 signal[idx].value = int(value)
             else:
@@ -194,7 +251,7 @@ class SequenceItem(avl.SequenceItem):
         """
         signal = getattr(self, name, None)
 
-        if isinstance(signal, list):
+        if (isinstance(signal, list) or isinstance(signal, LazySignalList)):
             if idx is not None:
                 return signal[idx].value
             else:
@@ -339,7 +396,7 @@ class SequenceItem(avl.SequenceItem):
         return False
 
 class WriteItem(SequenceItem):
-    def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
+    def __init__(self, name: str, parent: avl.Component) -> None:
         """
         Initialize the sequence item
 
@@ -363,23 +420,35 @@ class WriteItem(SequenceItem):
                 v = getattr(i_f, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
-        # Write Data Signals
+        # Write Data Signals - NOW WITH LAZY INITIALIZATION
         for s in w_m_signals:
             if s in ["wvalid", "wlast"]:
                 continue
 
             if hasattr(i_f, s):
                 v = getattr(i_f, s)
-                setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
+                # Capture variables in closure properly
+                sig_type = signal_to_type(s)
+                width = len(v)
+                auto_rand = is_random(s)
+                # Create factory function
+                factory = lambda st=sig_type, w=width, ar=auto_rand: st(0, width=w, auto_random=ar)
+                setattr(self, s, LazySignalList(factory, size=256))
 
-        # Read Response Signals - atomic loads
+        # Read Response Signals - NOW WITH LAZY INITIALIZATION
         for s in r_s_signals:
             if s in ["rvalid", "rlast"]:
                 continue
 
             if hasattr(i_f, s):
                 v = getattr(i_f, s)
-                setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
+                # Capture variables in closure properly
+                sig_type = signal_to_type(s)
+                width = len(v)
+                auto_rand = is_random(s)
+                # Create factory function
+                factory = lambda st=sig_type, w=width, ar=auto_rand: st(0, width=w, auto_random=ar)
+                setattr(self, s, LazySignalList(factory, size=256))
 
         # Write Response Signals
         for s in b_s_signals:
@@ -390,12 +459,12 @@ class WriteItem(SequenceItem):
                 v = getattr(i_f, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
-        # Wait cycles
+        # Wait cycles - ALSO WITH LAZY INITIALIZATION
         self.aw_wait_cycles = avl.Uint8(0, auto_random=False)
         """Wait cycles between control awvalid and control awready"""
         self.set_field_attributes("aw_wait_cycles", compare=False)
 
-        self.w_wait_cycles = [avl.Uint8(0, auto_random=False) for _ in range(256)]
+        self.w_wait_cycles = LazySignalList(lambda: avl.Uint8(0, auto_random=False), size=256)
         """Wait cycles between data wvalid and data wready"""
         self.set_field_attributes("w_wait_cycles", compare=False)
 
@@ -418,8 +487,7 @@ class WriteItem(SequenceItem):
         if hasattr(self, "wtrace"):
             self._wtrace_ = [avl.Logic(0, width=self.wtrace[0].width), avl.Logic(-1, width=self.wtrace[0].width)]
 
-        # Constraints
-
+        # Constraints (all remain the same)
         if hasattr(self, "awlen"):
             self.add_constraint("c_awlen", lambda x : ULE(x,len(self.wdata)-1), self.awlen)
 
@@ -460,7 +528,7 @@ class WriteItem(SequenceItem):
                 self.add_constraint("c_regualr_burst", lambda x : x != axi_burst_t.FIXED, self.awburst)
 
 class ReadItem(SequenceItem):
-    def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
+    def __init__(self, name: str, parent: avl.Component) -> None:
         """
         Initialize the sequence item
 
@@ -484,21 +552,27 @@ class ReadItem(SequenceItem):
                 v = getattr(i_f, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
-        # Read Response Signals
+        # Read Response Signals - NOW WITH LAZY INITIALIZATION
         for s in r_s_signals:
             if s in ["rvalid", "rlast"]:
                 continue
 
             if hasattr(i_f, s):
                 v = getattr(i_f, s)
-                setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
+                # Capture variables in closure properly
+                sig_type = signal_to_type(s)
+                width = len(v)
+                auto_rand = is_random(s)
+                # Create factory function
+                factory = lambda st=sig_type, w=width, ar=auto_rand: st(0, width=w, auto_random=ar)
+                setattr(self, s, LazySignalList(factory, size=256))
 
         # Wait cycles
         self.ar_wait_cycles = avl.Uint8(0, auto_random=False)
         """Wait cycles between control arvalid and control arready"""
         self.set_field_attributes("ar_wait_cycles", compare=False)
 
-        self.r_wait_cycles = [avl.Uint8(0, auto_random=False) for _ in range(256)]
+        self.r_wait_cycles = LazySignalList(lambda: avl.Uint8(0, auto_random=False), size=256)
         """Wait cycles between data rvalid and data rready"""
         self.set_field_attributes("r_wait_cycles", compare=False)
 
@@ -520,7 +594,7 @@ class ReadItem(SequenceItem):
         if hasattr(self, "rloop"):
             self._rloop_ = [avl.Logic(0, width=self.rloop[0].width), avl.Logic(-1, width=self.rloop[0].width)]
 
-        # Constraints
+        # Constraints (all remain the same)
         if hasattr(self, "arlen"):
             self.add_constraint("c_arlen", lambda x : ULE(x, len(self.rdata)-1), self.arlen)
 
