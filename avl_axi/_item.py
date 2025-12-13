@@ -396,7 +396,7 @@ class SequenceItem(avl.SequenceItem):
         return False
 
 class WriteItem(SequenceItem):
-    def __init__(self, name: str, parent: avl.Component) -> None:
+    def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
         """
         Initialize the sequence item
 
@@ -420,7 +420,7 @@ class WriteItem(SequenceItem):
                 v = getattr(i_f, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
-        # Write Data Signals - NOW WITH LAZY INITIALIZATION
+        # Write Data Signals - using lazy initialization
         for s in w_m_signals:
             if s in ["wvalid", "wlast"]:
                 continue
@@ -435,7 +435,7 @@ class WriteItem(SequenceItem):
                 factory = lambda st=sig_type, w=width, ar=auto_rand: st(0, width=w, auto_random=ar)
                 setattr(self, s, LazySignalList(factory, size=256))
 
-        # Read Response Signals - NOW WITH LAZY INITIALIZATION
+        # Read Response Signals - using lazy initialization
         for s in r_s_signals:
             if s in ["rvalid", "rlast"]:
                 continue
@@ -528,7 +528,7 @@ class WriteItem(SequenceItem):
                 self.add_constraint("c_regualr_burst", lambda x : x != axi_burst_t.FIXED, self.awburst)
 
 class ReadItem(SequenceItem):
-    def __init__(self, name: str, parent: avl.Component) -> None:
+    def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
         """
         Initialize the sequence item
 
@@ -552,7 +552,7 @@ class ReadItem(SequenceItem):
                 v = getattr(i_f, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
-        # Read Response Signals - NOW WITH LAZY INITIALIZATION
+        # Read Response Signals - using lazy initialization
         for s in r_s_signals:
             if s in ["rvalid", "rlast"]:
                 continue
