@@ -134,8 +134,6 @@ class Interface:
         if self.ID_W_WIDTH == 0:
             delattr(self, "awid")
             delattr(self, "bid")
-            delattr(self, "arid")
-            delattr(self, "rid")
 
         if self.REGION_Present == 0:
             delattr(self, "awregion")
