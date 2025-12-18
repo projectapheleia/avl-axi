@@ -14,7 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "matplotlib>=3.10.0",
-    "avl-core>=0.3.0",
+    "avl-core>=0.4.0",
 ]
 
 [project.optional-dependencies]

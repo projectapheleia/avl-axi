@@ -7,8 +7,8 @@
 import avl
 import avl_axi
 import cocotb
-from avl_axi._types import axi_burst_t
-
+from avl_axi._types import axi_resp_t
+from z3 import UGE, ULE, And, BitVecVal, Implies, Or, ZeroExt
 
 class DirectedSequence(avl_axi.ManagerSequence):
     async def body(self) -> None:
@@ -19,26 +19,10 @@ class DirectedSequence(avl_axi.ManagerSequence):
         self.info(f"Starting Directed Manager sequence {self.get_full_name()}")
         self.wait_for = "response"
 
-        # Writes
-        await self.write(awaddr=0x1000, awid=0, awlen=7, awsize=2, awburst=axi_burst_t.INCR, wdata=[0,1,2,3,4,5,6,7], wstrb=[0xF]*8)
-        await self.write(awaddr=0x2020, awid=1, awlen=15, awsize=2, awburst=axi_burst_t.WRAP, wdata=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], wstrb=[0xF]*16)
-
-        # Check
-        rsp = await self.read(araddr=0x1004, arid=1, arlen=7, arsize=2, arburst=axi_burst_t.FIXED)
-        assert rsp.rdata == [1,1,1,1,1,1,1,1]
-
-        rsp = await self.read(araddr=0x1000, arid=2, arlen=7, arsize=2, arburst=axi_burst_t.INCR)
-        assert rsp.rdata == [0,1,2,3,4,5,6,7]
-
-        rsp = await self.read(araddr=0x1010, arid=3, arlen=7, arsize=2, arburst=axi_burst_t.WRAP)
-        assert rsp.rdata == [4,5,6,7,0,1,2,3]
-
-        rsp = await self.read(araddr=0x2000, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.WRAP)
-        assert rsp.rdata == [0x08, 0x09, 0x0a, 0x0b,
-                             0x0c, 0x0d, 0x0e, 0x0f,
-                             0x00, 0x01, 0x02, 0x03,
-                             0x04, 0x05, 0x06, 0x07]
-
+        wdata = [0<<0,1<<8,2<<16,3<<24,4<<32,5<<40,6<<48,7<<56]
+        await self.write(awaddr=0x1000, awcache=0, awid=0, awlen=7, awsize=0, awburst=1, wdata=wdata, wstrb=[1, 1<<1, 1<<2, 1<<3, 1<<4, 1<<5, 1<<6, 1<<7], awlock=0)
+        rsp = await self.read (araddr=0x1000, arcache=0, arid=0, arlen=7, arsize=0, arburst=1, arlock=0)
+        assert rsp.rresp == [axi_resp_t.OKAY]*8 and rsp.rdata == wdata
 
 class example_env(avl.Env):
 

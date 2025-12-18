@@ -6,11 +6,11 @@
 from typing import Any
 
 import avl
-from z3 import UGE, ULE, And, BitVecVal, Implies, Or, ZeroExt
+from z3 import ULE, BitVecVal, Implies, Or, ZeroExt
 
 from ._signals import ar_m_signals, aw_m_signals, b_s_signals, is_random, r_s_signals, w_m_signals
 from ._types import axi_atomic_t, axi_burst_t, axi_resp_t, signal_to_type
-
+from ._utils import get_burst_addresses
 
 class SequenceItem(avl.SequenceItem):
 
@@ -25,7 +25,7 @@ class SequenceItem(avl.SequenceItem):
         super().__init__(name, parent)
 
         # Handle to interface - defines capabilities and parameters
-        i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
+        self._i_f_ = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
 
         # Add events for finer grained sequence control
         self.add_event("awake")
@@ -36,7 +36,7 @@ class SequenceItem(avl.SequenceItem):
         self.set_table_fmt(transpose=True)
 
         # Local / Hidden Parameters
-        for k, v in vars(i_f).items():
+        for k, v in vars(self._i_f_).items():
             if isinstance(v, (int | str)):
                 setattr(self, f"_{k}_", v)
 
@@ -99,6 +99,10 @@ class SequenceItem(avl.SequenceItem):
         - command / response fields that should match
         - parameters that enforce values
         """
+
+        # Check size <= buswidth
+        assert (1 << self.get("arsize", default=0)) <= self._i_f_.DATA_WIDTH // 8
+        assert (1 << self.get("awsize", default=0)) <= self._i_f_.DATA_WIDTH // 8
 
         # Fixed burst disable must be obeyed
         if self._Fixed_Burst_Disable_ or self._Regular_Transactions_Only_:
@@ -348,19 +352,16 @@ class WriteItem(SequenceItem):
         """
         super().__init__(name, parent)
 
-        # Handle to interface - defines capabilities and parameters
-        i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
-
-        if hasattr(i_f, "awakeup"):
-            self.goto_sleep = avl.Logic(0, width=len(i_f.awakeup), fmt=str)
+        if hasattr(self._i_f_, "awakeup"):
+            self.goto_sleep = avl.Logic(0, width=len(self._i_f_.awakeup), fmt=str)
 
         # Write Control Signals
         for s in aw_m_signals:
             if s in ["awvalid"]:
                 continue
 
-            if hasattr(i_f, s):
-                v = getattr(i_f, s)
+            if hasattr(self._i_f_, s):
+                v = getattr(self._i_f_, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
         # Write Data Signals
@@ -368,8 +369,8 @@ class WriteItem(SequenceItem):
             if s in ["wvalid", "wlast"]:
                 continue
 
-            if hasattr(i_f, s):
-                v = getattr(i_f, s)
+            if hasattr(self._i_f_, s):
+                v = getattr(self._i_f_, s)
                 setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
 
         # Read Response Signals - atomic loads
@@ -377,8 +378,8 @@ class WriteItem(SequenceItem):
             if s in ["rvalid", "rlast"]:
                 continue
 
-            if hasattr(i_f, s):
-                v = getattr(i_f, s)
+            if hasattr(self._i_f_, s):
+                v = getattr(self._i_f_, s)
                 setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
 
         # Write Response Signals
@@ -386,8 +387,8 @@ class WriteItem(SequenceItem):
             if s in ["bvalid"]:
                 continue
 
-            if hasattr(i_f, s):
-                v = getattr(i_f, s)
+            if hasattr(self._i_f_, s):
+                v = getattr(self._i_f_, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
         # Wait cycles
@@ -420,17 +421,20 @@ class WriteItem(SequenceItem):
 
         # Constraints
 
+        if hasattr(self, "awsize"):
+            self.add_constraint("c_awsize", lambda x : ULE(x, BitVecVal((self._i_f_.DATA_WIDTH//8).bit_length()-1, x.size())), self.awsize)
+
         if hasattr(self, "awlen"):
             self.add_constraint("c_awlen", lambda x : ULE(x,len(self.wdata)-1), self.awlen)
 
             if hasattr(self, "awsize"):
                 self.add_constraint("c_max_transaction_bytes",
-                                     lambda x,y : ULE(((ZeroExt(8, x) + BitVecVal(1, 16)) << ZeroExt(13, y)), BitVecVal(i_f.Max_Transaction_Bytes,16)),
+                                     lambda x,y : ULE(((ZeroExt(8, x) + BitVecVal(1, 16)) << ZeroExt(13, y)), BitVecVal(self._i_f_.Max_Transaction_Bytes,16)),
                                      self.awlen, self.awsize)
             else:
-                self.add_constraint("c_max_transaction_bytes", lambda x : ULE((ZeroExt(8, x) + BitVecVal(1, 16)), BitVecVal(i_f.Max_Transaction_Bytes,16)), self.awlen)
+                self.add_constraint("c_max_transaction_bytes", lambda x : ULE((ZeroExt(8, x) + BitVecVal(1, 16)), BitVecVal(self._i_f_.Max_Transaction_Bytes,16)), self.awlen)
         elif hasattr(self, "awsize"):
-            self.add_constraint("c_max_transaction_bytes", lambda y : ULE(1 << ZeroExt(13, y), BitVecVal(i_f.Max_Transaction_Bytes,16)), self.awsize)
+            self.add_constraint("c_max_transaction_bytes", lambda y : ULE(1 << ZeroExt(13, y), BitVecVal(self._i_f_.Max_Transaction_Bytes,16)), self.awsize)
 
         if hasattr(self, "awatop"):
             self.add_constraint("c_awatop_legal", lambda x: Or(*(x == v for v in self.awatop.values())), self.awatop)
@@ -448,16 +452,35 @@ class WriteItem(SequenceItem):
             if hasattr(self, "awidunq"):
                 self.add_constraint("c_awtagop_cache", lambda x,y : Implies(x != 0, y == 1), self.awtagop, self.awidunq)
 
-        if hasattr(self, "awburst") and i_f.Fixed_Burst_Disable:
+        if hasattr(self, "awburst") and self._i_f_.Fixed_Burst_Disable:
             self.add_constraint("c_fixed_burst_disable", lambda x : x != axi_burst_t.FIXED, self.awburst)
 
-        if i_f.Regular_Transactions_Only:
+        if self._i_f_.Regular_Transactions_Only:
             if hasattr(self, "awlen"):
                 self.add_constraint("c_regular_len", lambda x : Or(x==0, x==1, x==3, x==7, x==15), self.awlen)
                 if hasattr(self, "awsize"):
-                    self.add_constraint("c_regular_size", lambda x,y: Implies(y != 0, (1 << ZeroExt(8, x) == i_f.DATA_WIDTH/8)), self.awsize, self.awlen)
+                    self.add_constraint("c_regular_size", lambda x,y: Implies(y != 0, (1 << ZeroExt(8, x) == self._i_f_.DATA_WIDTH/8)), self.awsize, self.awlen)
             if hasattr(self, "awburst"):
                 self.add_constraint("c_regualr_burst", lambda x : x != axi_burst_t.FIXED, self.awburst)
+
+    def post_randomize(self):
+        """
+        Post Randomize actions
+        """
+        super().post_randomize()
+
+        # Post process wstrbs to be legal
+        # Difficult to constrain so patch
+        if hasattr(self, "wstrb"):
+            addresses = get_burst_addresses(self.awaddr,
+                                            self.get("awlen", default=0),
+                                            self.get("awsize", default=0),
+                                            self.get("awburst", default=axi_burst_t.INCR))
+
+            wstrb_mask = (1 << (2**self.get("awsize", default=0))) - 1
+            for i,a in enumerate(addresses):
+                offset = a & (self._i_f_.DATA_WIDTH//8)-1
+                self.wstrb[i] &= (wstrb_mask << offset)
 
 class ReadItem(SequenceItem):
     def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
@@ -469,19 +492,16 @@ class ReadItem(SequenceItem):
         """
         super().__init__(name, parent)
 
-        # Handle to interface - defines capabilities and parameters
-        i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
-
-        if hasattr(i_f, "awakeup"):
-            self.goto_sleep = avl.Logic(0, width=len(i_f.awakeup), fmt=str)
+        if hasattr(self._i_f_, "awakeup"):
+            self.goto_sleep = avl.Logic(0, width=len(self._i_f_.awakeup), fmt=str)
 
         # Read Control Signals
         for s in ar_m_signals:
             if s in ["arvalid"]:
                 continue
 
-            if hasattr(i_f, s):
-                v = getattr(i_f, s)
+            if hasattr(self._i_f_, s):
+                v = getattr(self._i_f_, s)
                 setattr(self, s, signal_to_type(s)(0, width=len(v), auto_random=is_random(s)))
 
         # Read Response Signals
@@ -489,8 +509,8 @@ class ReadItem(SequenceItem):
             if s in ["rvalid", "rlast"]:
                 continue
 
-            if hasattr(i_f, s):
-                v = getattr(i_f, s)
+            if hasattr(self._i_f_, s):
+                v = getattr(self._i_f_, s)
                 setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
 
         # Wait cycles
@@ -521,15 +541,19 @@ class ReadItem(SequenceItem):
             self._rloop_ = [avl.Logic(0, width=self.rloop[0].width), avl.Logic(-1, width=self.rloop[0].width)]
 
         # Constraints
+
+        if hasattr(self, "arsize"):
+            self.add_constraint("c_arsize", lambda x : ULE(x, BitVecVal((self._i_f_.DATA_WIDTH//8).bit_length()-1, x.size())), self.arsize)
+
         if hasattr(self, "arlen"):
             self.add_constraint("c_arlen", lambda x : ULE(x, len(self.rdata)-1), self.arlen)
 
             if hasattr(self, "arsize"):
-                self.add_constraint("c_max_transaction_bytes", lambda x,y : ULE(((ZeroExt(8, x) + 1) << ZeroExt(13, y)), BitVecVal(i_f.Max_Transaction_Bytes, 16)), self.arlen, self.arsize)
+                self.add_constraint("c_max_transaction_bytes", lambda x,y : ULE(((ZeroExt(8, x) + 1) << ZeroExt(13, y)), BitVecVal(self._i_f_.Max_Transaction_Bytes, 16)), self.arlen, self.arsize)
             else:
-                self.add_constraint("c_max_transaction_bytes", lambda x : (ULE(ZeroExt(8, x) +1), BitVecVal(i_f.Max_Transaction_Bytes, 16)), self.arlen)
+                self.add_constraint("c_max_transaction_bytes", lambda x : (ULE(ZeroExt(8, x) +1), BitVecVal(self._i_f_.Max_Transaction_Bytes, 16)), self.arlen)
         elif hasattr(self, "arsize"):
-            self.add_constraint("c_max_transaction_bytes", lambda y : ULE(1 << ZeroExt(13, y), BitVecVal(i_f.Max_Transaction_Bytes, 16)), self.arsize)
+            self.add_constraint("c_max_transaction_bytes", lambda y : ULE(1 << ZeroExt(13, y), BitVecVal(self._i_f_.Max_Transaction_Bytes, 16)), self.arsize)
 
         if hasattr(self, "artagop"):
             self.add_constraint("c_artagop_reserved", lambda x : x != 0b10, self.artagop)
@@ -539,19 +563,20 @@ class ReadItem(SequenceItem):
             if hasattr(self, "aridunq"):
                 self.add_constraint("c_artagop_cache", lambda x,y : Implies(x != 0, y == 1), self.artagop, self.aridunq)
 
-        if hasattr(self, "arburst") and i_f.Fixed_Burst_Disable:
+        if hasattr(self, "arburst") and self._i_f_.Fixed_Burst_Disable:
             self.add_constraint("c_fixed_burst_disable", lambda x : x != axi_burst_t.FIXED, self.arburst)
 
-        if i_f.Regular_Transactions_Only:
+        if self._i_f_.Regular_Transactions_Only:
             if hasattr(self, "arlen"):
                 self.add_constraint("c_regular_len", lambda x : Or(x==0, x==1, x==3, x==7, x==15), self.arlen)
                 if hasattr(self, "arsize"):
-                    self.add_constraint("c_regular_size", lambda x,y: Implies(y != 0, (1 << ZeroExt(8, x) == i_f.DATA_WIDTH/8)), self.arsize, self.arlen)
+                    self.add_constraint("c_regular_size", lambda x,y: Implies(y != 0, (1 << ZeroExt(8, x) == self._i_f_.DATA_WIDTH/8)), self.arsize, self.arlen)
             if hasattr(self, "arburst"):
                 self.add_constraint("c_regualr_burst", lambda x : x != axi_burst_t.FIXED, self.arburst)
 
     def post_randomize(self):
         """
+        Post Randomize actions
         """
         super().post_randomize()
 
