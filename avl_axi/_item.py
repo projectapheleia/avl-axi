@@ -48,9 +48,8 @@ class SequenceItem(avl.SequenceItem):
         :type size: int
 
         :param finalize: Remove any un-used fields
-        :type finalize : bool
+        :type finalize: bool
         :return: None
-
         """
         if size is None:
             n = self.get_len()+1

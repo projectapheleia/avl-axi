@@ -1,5 +1,7 @@
 # Changelog
 
+## [v0.3.0] - 2025-12-19
+
 ### Fixed
  - [#7] (https://github.com/projectapheleia/avl-axi/issues/7) Sequence: Sequence only waits on last item. Can complete early on out-of-order responses
  - [#8] (https://github.com/projectapheleia/avl-axi/issues/8) Atomics: Randomization of atomics can break single outstanding ID requirements
@@ -8,25 +10,25 @@
  - [#10](https://github.com/projectapheleia/avl-axi/issues/10) smemory: read/write data is not shifted on misaligned accesses #10
     - Requires newer version of avl-core that supports rotation in memory model - v0.4.0(https://github.com/projectapheleia/avl/commit/e524043490677997a35b20244c206ac809733b0a)
 
-[v0.2.2] - 2025-11-14
+## [v0.2.2] - 2025-11-14
 
 ### Fixed
  - [#6] (https://github.com/projectapheleia/avl-axi/issues/6) [item] c_awatop_size constraint issue
 
-[v0.2.1] - 2025-10-25
+## [v0.2.1] - 2025-10-25
 
 ### Fixed
  - [#3] (https://github.com/projectapheleia/avl-axi/issues/3) AVL_AXI coverage init issue
  - [#4] (https://github.com/projectapheleia/avl-axi/issues/4) AXI5 ATOPs should always respond on the B channel
  - [#5] (https://github.com/projectapheleia/avl-axi/issues/5) Monitors blocked awiting on reset
 
-[v0.2.0] - 2025-10-12
+## [v0.2.0] - 2025-10-12
 
 ### Fixed
  - [#2](https://github.com/projectapheleia/avl-axi/issues/2) Unique IDs and Tag ID create new dict instead of clearing class dict
  - [#1](https://github.com/projectapheleia/avl-axi/issues/1) Modelsim does not support detecting parameters through VPI
 
-[v0.1.0] - 2025-09-28
+## [v0.1.0] - 2025-09-28
 
 ### Added
 - First version

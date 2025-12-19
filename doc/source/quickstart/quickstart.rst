@@ -40,7 +40,7 @@ If you want to install a specific version, you can specify the version number:
 
 .. code-block:: bash
 
-    pip install avl-axi==0.2.2
+    pip install avl-axi==0.3.0
 
 Installing From Source
 ----------------------
