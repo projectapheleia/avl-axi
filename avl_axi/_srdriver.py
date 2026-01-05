@@ -98,7 +98,7 @@ class SubordinateReadDriver(Driver):
             # Send item to response phase
             for s in ar_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
-            item.resize(finalize=True)
+            item.resize()
 
             # Handle Memory Access
             if self.memory is not None:

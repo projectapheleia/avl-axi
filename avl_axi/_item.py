@@ -3,6 +3,9 @@
 # Description:
 # Apheleia Verification Library Sequence Item
 
+from collections import defaultdict
+from collections.abc import MutableMapping, MutableSequence
+
 from typing import Any
 
 import avl
@@ -40,15 +43,15 @@ class SequenceItem(avl.SequenceItem):
             if isinstance(v, (int | str)):
                 setattr(self, f"_{k}_", v)
 
-    def resize(self, size : int = None, finalize : bool = False) -> None:
+    def resize(self, size : int = None, randomize : bool = False) -> None:
         """
         Re-size transaction data fields based on len
 
         :param size: New size of the transaction (len+1) - if None use current len+1
         :type size: int
 
-        :param finalize: Remove any un-used fields
-        :type finalize: bool
+        :param randomize: Randomize any un-created fields
+        :type randomize: bool
         :return: None
         """
         if size is None:
@@ -59,17 +62,25 @@ class SequenceItem(avl.SequenceItem):
         # Re-Size Write Data
         for s in w_m_signals + ["w_wait_cycles"]:
             if hasattr(self, s):
-                lst = getattr(self, s)
-                setattr(self, s, lst[:n])
+                v = getattr(self, s)
+                for i in range(n):
+                    if i not in v:
+                        v[i].value = 0
+                        if randomize and v[i]._auto_random_:
+                            v[i].randomize()
 
         # Re-Size Read Data
         for s in r_s_signals + ["r_wait_cycles"]:
             if hasattr(self, s):
-                if not self.has_rresp() and finalize:
+                if not self.has_rresp():
                     delattr(self, s)
                 else:
-                    lst = getattr(self, s)
-                    setattr(self, s, lst[:n])
+                    v = getattr(self, s)
+                    for i in range(n):
+                        if i not in v:
+                            v[i].value = 0
+                            if randomize and v[i]._auto_random_:
+                                v[i].randomize()
 
         # Force IDs, loop to match
         if hasattr(self, "bid"):
@@ -98,6 +109,12 @@ class SequenceItem(avl.SequenceItem):
         - command / response fields that should match
         - parameters that enforce values
         """
+
+        # Check length
+        for s in w_m_signals + ["w_wait_cycles"] + r_s_signals + ["r_wait_cycles"]:
+            if hasattr(self, s):
+                v = getattr(self, s)
+                assert len(v) == self.get_len() + 1
 
         # Check size <= buswidth
         assert (1 << self.get("arsize", default=0)) <= self._i_f_.DATA_WIDTH // 8
@@ -153,7 +170,7 @@ class SequenceItem(avl.SequenceItem):
         """
         super().post_randomize()
 
-        self.resize(finalize=True)
+        self.resize(randomize=True)
 
         # Force alignment for Regular Transaction - quicker than constraint
         if self._Regular_Transactions_Only_:
@@ -177,7 +194,7 @@ class SequenceItem(avl.SequenceItem):
         :return: None
         """
         signal = getattr(self, name, None)
-        if isinstance(signal, list):
+        if isinstance(signal, (MutableSequence | MutableMapping | tuple)):
             if idx is not None:
                 signal[idx].value = int(value)
             else:
@@ -197,7 +214,7 @@ class SequenceItem(avl.SequenceItem):
         """
         signal = getattr(self, name, None)
 
-        if isinstance(signal, list):
+        if isinstance(signal, (MutableSequence | MutableMapping | tuple)):
             if idx is not None:
                 return signal[idx].value
             else:
@@ -370,7 +387,7 @@ class WriteItem(SequenceItem):
 
             if hasattr(self._i_f_, s):
                 v = getattr(self._i_f_, s)
-                setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
+                setattr(self, s, defaultdict(lambda s=s,v=v: signal_to_type(s)(0, width=len(v), auto_random=is_random(s))))
 
         # Read Response Signals - atomic loads
         for s in r_s_signals:
@@ -379,7 +396,7 @@ class WriteItem(SequenceItem):
 
             if hasattr(self._i_f_, s):
                 v = getattr(self._i_f_, s)
-                setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
+                setattr(self, s, defaultdict(lambda s=s,v=v: signal_to_type(s)(0, width=len(v), auto_random=is_random(s))))
 
         # Write Response Signals
         for s in b_s_signals:
@@ -395,7 +412,7 @@ class WriteItem(SequenceItem):
         """Wait cycles between control awvalid and control awready"""
         self.set_field_attributes("aw_wait_cycles", compare=False)
 
-        self.w_wait_cycles = [avl.Uint8(0, auto_random=False) for _ in range(256)]
+        self.w_wait_cycles = defaultdict(lambda: avl.Uint8(0, auto_random=False))
         """Wait cycles between data wvalid and data wready"""
         self.set_field_attributes("w_wait_cycles", compare=False)
 
@@ -424,8 +441,6 @@ class WriteItem(SequenceItem):
             self.add_constraint("c_awsize", lambda x : ULE(x, BitVecVal((self._i_f_.DATA_WIDTH//8).bit_length()-1, x.size())), self.awsize)
 
         if hasattr(self, "awlen"):
-            self.add_constraint("c_awlen", lambda x : ULE(x,len(self.wdata)-1), self.awlen)
-
             if hasattr(self, "awsize"):
                 self.add_constraint("c_max_transaction_bytes",
                                      lambda x,y : ULE(((ZeroExt(8, x) + BitVecVal(1, 16)) << ZeroExt(13, y)), BitVecVal(self._i_f_.Max_Transaction_Bytes,16)),
@@ -510,15 +525,16 @@ class ReadItem(SequenceItem):
 
             if hasattr(self._i_f_, s):
                 v = getattr(self._i_f_, s)
-                setattr(self, s, [signal_to_type(s)(0, width=len(v), auto_random=is_random(s)) for _ in range(256)])
+                setattr(self, s, defaultdict(lambda s=s,v=v: signal_to_type(s)(0, width=len(v), auto_random=is_random(s))))
 
         # Wait cycles
         self.ar_wait_cycles = avl.Uint8(0, auto_random=False)
         """Wait cycles between control arvalid and control arready"""
         self.set_field_attributes("ar_wait_cycles", compare=False)
 
-        self.r_wait_cycles = [avl.Uint8(0, auto_random=False) for _ in range(256)]
+        self.r_wait_cycles = defaultdict(lambda: avl.Uint8(0, auto_random=False))
         """Wait cycles between data rvalid and data rready"""
+
         self.set_field_attributes("r_wait_cycles", compare=False)
 
         # Reduced signals used for coverage
@@ -545,8 +561,6 @@ class ReadItem(SequenceItem):
             self.add_constraint("c_arsize", lambda x : ULE(x, BitVecVal((self._i_f_.DATA_WIDTH//8).bit_length()-1, x.size())), self.arsize)
 
         if hasattr(self, "arlen"):
-            self.add_constraint("c_arlen", lambda x : ULE(x, len(self.rdata)-1), self.arlen)
-
             if hasattr(self, "arsize"):
                 self.add_constraint("c_max_transaction_bytes", lambda x,y : ULE(((ZeroExt(8, x) + 1) << ZeroExt(13, y)), BitVecVal(self._i_f_.Max_Transaction_Bytes, 16)), self.arlen, self.arsize)
             else:

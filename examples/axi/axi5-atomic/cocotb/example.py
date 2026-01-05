@@ -22,111 +22,112 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Normal operation
         await self.write(awaddr=0x1000, awid=0, awsize=3, wdata=[0xaaaaaaaaaaaaaaaa], wstrb=[0xFF])
-
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xaaaaaaaaaaaaaaaa]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaaa }
 
         # Test : Atomic load add
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_ADD, wdata=[1])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xaaaaaaaaaaaaaaaa]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaaa }
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xaaaaaaaaaaaaaaab]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaab }
 
         # Test : Atomic store add
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.STORE_LE_ADD, wdata=[2])
         assert rsp.bresp == 0
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xaaaaaaaaaaaaaaad]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaad }
 
         # Test : Atomic clr
         await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xffffffffffff], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_CLR, wdata=[0xffff00000000ffff])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xffffffffffff]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xffffffffffff }
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0x0000ffffffff0000]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x0000ffffffff0000 }
 
         # Test : Atomic Exclusive OR
         await self.write(awaddr=0x1000, awid=2, awsize=3, wdata=[0xaaaaaaaaaaaaaaaa], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=2, awsize=3, awatop=axi_atomic_t.LOAD_LE_EOR, wdata=[0x5555555555555555])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xaaaaaaaaaaaaaaaa]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaaa }
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xffffffffffffffff]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xffffffffffffffff }
 
         # Test : Atomic Set
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0x1234567800000000], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=3, awsize=3, awatop=axi_atomic_t.LOAD_LE_SET, wdata=[0xf000000055555555])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0x1234567800000000]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x1234567800000000 }
 
         rsp = await self.read(araddr=0x1000, arid=1, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xf234567855555555]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xf234567855555555 }
 
         # Test : Atomic SMAX
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[10], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_SMAX, wdata=[100])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [10]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 10 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [100]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 100 }
 
         # Test : Atomic SMIN
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[20], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_SMIN, wdata=[-100])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [20]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 20 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [-100&0xffffffffffffffff]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : -100&0xffffffffffffffff }
 
         # Test : Atomic UMAX
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0x12345], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_UMAX, wdata=[0xfffff])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0x12345]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x12345 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xfffff]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xfffff }
 
         # Test : Atomic UMIN
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0xfff], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_UMIN, wdata=[0x23])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xfff]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xfff }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0x23]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x23 }
 
         # Test : Atomic SWAP
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.SWAP, wdata=[0xcafebabe])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xdeadbeef]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xdeadbeef }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xcafebabe]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xcafebabe }
 
         # Test : Atomic COMPARE
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0xcafebabedeadbeef], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.COMPARE, wdata=[0xb00bf00ddeadbeef])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xcafebabedeadbeef]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xcafebabedeadbeef }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0xcafebabeb00bf00d]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xcafebabeb00bf00d }
 
         # Test : Endianness - ADD
         await self.write(awaddr=0x1000, awid=0, awsize=3, wdata=[0x0001020304050607], wstrb=[0xFF])
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_BE_ADD, wdata=[0x01])
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0x0001020304050607]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x0001020304050607 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
-        assert rsp.rresp == [axi_resp_t.OKAY] and rsp.rdata == [0x0101020304050607]
+        assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x0101020304050607 }
 
         # Test : BURST
         await self.write(awaddr=0x1000, awid=2, awsize=3, awlen=7, awburst=1, wdata=[0xaa00]*8, wstrb=[0xFF]*8)
         rsp = await self.write(awaddr=0x1000, awid=3, awsize=3, awlen=7, awburst=1, awatop=axi_atomic_t.LOAD_LE_SET, wdata=[0x01,0x2,0x3,0x4,0x5,0x6,0x7,0x8])
-        assert rsp.rresp == [axi_resp_t.OKAY]*8 and rsp.rdata == [0xaa00]*8
+        for i in range(8):
+            assert rsp.rresp[i] == axi_resp_t.OKAY and rsp.rdata[i] == 0xaa00
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3, arlen=7, arburst=1)
-        assert rsp.rresp == [axi_resp_t.OKAY]*8 and rsp.rdata == [0xaa01,0xaa02,0xaa03,0xaa04,0xaa05,0xaa06,0xaa07,0xaa08]
+        for i in range(8):
+            assert rsp.rresp[i] == axi_resp_t.OKAY and rsp.rdata[i] == 0xaa01 + i
 
         # Test : Randomization
         for _ in range(20):
