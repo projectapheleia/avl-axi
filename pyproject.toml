@@ -1,6 +1,6 @@
 [project]
 name = "avl-axi"
-version = "0.3.0"
+version = "0.4.0"
 description = "Apheleia Verification Library - AMBA AXI verification component."
 authors = [{name = "avl", email = "avl@projectapheleia.net"}]
 maintainers = [{name = "avl", email = "avl@projectapheleia.net"}]
@@ -14,7 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "matplotlib>=3.10.0",
-    "avl-core>=0.4.0",
+    "avl-core>=0.4.1",
 ]
 
 [project.optional-dependencies]

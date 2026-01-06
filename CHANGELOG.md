@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.4.0] - 2026-01-06
+
+### Fixed
+ - [#14](https://github.com/projectapheleia/avl-axi/issues/14) Performance: Using 256 entry list has large overhead on object creation
+    - Requires v0.4.1 of avl-core to support defaultdicts - v0.4.1(https://github.com/projectapheleia/avl/commit/1a6b63a35e1c4f0b963123136dadd5ed093bf395)
+
 ## [v0.3.0] - 2025-12-19
 
 ### Fixed
