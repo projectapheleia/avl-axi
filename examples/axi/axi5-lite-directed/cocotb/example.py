@@ -25,13 +25,13 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Blocking Reads
         rsp = await self.read(araddr=0x1000, arsize=3, arid=0)
-        assert rsp.get("rdata", default=0) == [0xdeadbeef]
+        assert rsp.get("rdata", default=0) == { 0 : 0xdeadbeef }
 
         rsp = await self.read(araddr=0x1008, arsize=3, arid=1)
-        assert rsp.get("rdata", default=0) == [0xcafebabe]
+        assert rsp.get("rdata", default=0) == { 0 : 0xcafebabe }
 
         rsp = await self.read(araddr=0x1010, arsize=3, arid=2)
-        assert rsp.get("rdata", default=0) == [0xf00dfeed]
+        assert rsp.get("rdata", default=0) == { 0 : 0xf00dfeed }
 
         # Non-blocking reads
         t0 = cocotb.start_soon(self.read(araddr=0x1000, arsize=3, arid=3))
@@ -39,13 +39,13 @@ class DirectedSequence(avl_axi.ManagerSequence):
         t2 = cocotb.start_soon(self.read(araddr=0x1010, arsize=3, arid=5))
 
         rsp = await t0
-        assert rsp.get("rdata", default=0) == [0xdeadbeef]
+        assert rsp.get("rdata", default=0) == { 0 : 0xdeadbeef }
 
         rsp = await t1
-        assert rsp.get("rdata", default=0) == [0xcafebabe]
+        assert rsp.get("rdata", default=0) == { 0 : 0xcafebabe }
 
         rsp = await t2
-        assert rsp.get("rdata", default=0) == [0xf00dfeed]
+        assert rsp.get("rdata", default=0) == { 0 : 0xf00dfeed }
 
 class example_env(avl.Env):
 

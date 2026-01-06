@@ -22,7 +22,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
         wdata = [0<<0,1<<8,2<<16,3<<24,4<<32,5<<40,6<<48,7<<56]
         await self.write(awaddr=0x1000, awcache=0, awid=0, awlen=7, awsize=0, awburst=1, wdata=wdata, wstrb=[1, 1<<1, 1<<2, 1<<3, 1<<4, 1<<5, 1<<6, 1<<7], awlock=0)
         rsp = await self.read (araddr=0x1000, arcache=0, arid=0, arlen=7, arsize=0, arburst=1, arlock=0)
-        assert rsp.rresp == [axi_resp_t.OKAY]*8 and rsp.rdata == wdata
+        assert list(rsp.rresp.values()) == [axi_resp_t.OKAY]*8 and list(rsp.rdata.values()) == wdata
 
 class example_env(avl.Env):
 

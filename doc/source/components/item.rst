@@ -68,15 +68,34 @@ or variable.
 Resize
 ------
 
-By default items contain lists for all W and R payloads (256 beats). A :any:`SequenceItem.resize` function is provided to remove any data relating to beats excluded based on awlen / arlen.\
+By default items contain `defaultdicts <https://docs.python.org/3/library/collections.html#collections.defaultdict>`_ for all W and R payloads. A :any:`SequenceItem.resize` function is \
+provided to pad any remaining data based on awlen / arlen.\
 This function is called automatically in the :any:`SequenceItem.post_randomize` function or by the sequence when directed stimulus is used.
 
-The stage improved performance and keep trace files and prints clean, only representing the real transaction.
+`defaultdicts <https://docs.python.org/3/library/collections.html#collections.defaultdict>`_ have been used for performance. The overhead of creating the 256 beats worth of data is high. \
+The monitors naturally populate all beats with the correct payloads. This is checked using the :any:`SequenceItem.sanity` function, called before the monitor exports the item. :any:`SequenceItem.resize` is \
+called as part of the sequence to fully populate the remaining data in both the randomized and directed sequences.
+
+The downside is that the data contained in the W and R phases are now dicts / arrays indexed by position. However, the :any:`ManagerSequence.write` and :any:`ManagerSequence.read` functions allow these to be defined as \
+dicts or lists for the users convenience.
+
+Comparison functions remain unchanged.
+
+Should the user which to limit the number of beats in a transaction, standard constraints are usable:
+
+.. code-block:: python
+
+    # Constraint Writes
+    self.add_constraint("c_custom_write", lambda x : ULE(x, 8), self.awlen)
+
+    # Constrain Reads
+    self.add_constraint("c_custom_read", lambda x : ULE(x, 8), self.arlen)
+
 
 Sanity
 ------
 
-A :any:`SequenceItem.sanity` function is provided to ensure and intra item constraints are keep. For example arid and rid must match within a single item.
+A :any:`SequenceItem.sanity` function is provided to ensure and intra item constraints are kept. For example arid and rid must match within a single item.
 This function is called by the :any:`WriteMonitor` and :any:`ReadMonitor` when the transaction response phase is completed.
 
 .. _regular_transactions_only:

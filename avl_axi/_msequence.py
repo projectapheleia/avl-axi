@@ -3,6 +3,8 @@
 # Description:
 # Apheleia Verification Library Manager Sequence
 
+from collections.abc import MutableMapping, MutableSequence
+
 import random
 
 import avl
@@ -91,7 +93,7 @@ class ManagerSequence(avl.Sequence):
         if randomize:
             item.randomize()
         else:
-            item.resize(finalize=True)
+            item.resize()
         await self.finish_item(item)
 
         # Track
@@ -107,7 +109,7 @@ class ManagerSequence(avl.Sequence):
         """
 
         item = random.choice([WriteItem(f"from_{self.name}", self), ReadItem(f"from_{self.name}", self)])
-        return await self._send_(item, wait_for=self.wait_for)
+        return await self._send_(item, randomize=True, wait_for=self.wait_for)
 
     async def write(self, **kwargs) -> WriteItem:
         """
@@ -120,7 +122,14 @@ class ManagerSequence(avl.Sequence):
 
         for k,v in kwargs.items():
             if hasattr(item, k):
-                item.set(k, v)
+                if isinstance(v, (MutableSequence | tuple)):
+                    for _i,_v in enumerate(v):
+                        item.set(k, _v, idx=_i)
+                elif isinstance(v, MutableMapping):
+                    for _k,_v in v.items():
+                        item.set(k, _v, idx=_k)
+                else:
+                    item.set(k, v)
 
         if "wait_for" in kwargs:
             wait_for = kwargs["wait_for"]
@@ -140,7 +149,14 @@ class ManagerSequence(avl.Sequence):
 
         for k,v in kwargs.items():
             if hasattr(item, k):
-                item.set(k, v)
+                if isinstance(v, (MutableSequence | tuple)):
+                    for _i,_v in enumerate(v):
+                        item.set(k, _v, idx=_i)
+                elif isinstance(v, MutableMapping):
+                    for _k,_v in v.items():
+                        item.set(k, _v, idx=_k)
+                else:
+                    item.set(k, v)
 
         if "wait_for" in kwargs:
             wait_for = kwargs["wait_for"]
@@ -156,7 +172,7 @@ class ManagerSequence(avl.Sequence):
 
         self.info(f"Starting Manager sequence {self.get_full_name()} with {self.n_items} items")
         for _ in range(self.n_items):
-            item = await self.next()
+            _item = await self.next()
 
     async def post_body(self) -> None:
         """

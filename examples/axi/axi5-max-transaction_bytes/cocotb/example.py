@@ -8,18 +8,21 @@ import avl
 import avl_axi
 import cocotb
 
+from z3 import ULE
 
 class CustomWrite(avl_axi.WriteItem):
 
     def __init__(self, name, parent=None):
         super().__init__(name, parent=parent)
-        self.resize(size=8)
+
+        self.add_constraint("c_custom_write", lambda x : ULE(x, 8), self.awlen)
 
 class CustomRead(avl_axi.ReadItem):
 
     def __init__(self, name, parent=None):
         super().__init__(name, parent=parent)
-        self.resize(size=8)
+
+        self.add_constraint("c_custom_read", lambda x : ULE(x, 8), self.arlen)
 
 class example_env(avl.Env):
 

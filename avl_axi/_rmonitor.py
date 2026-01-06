@@ -77,7 +77,7 @@ class ReadMonitor(avl.Monitor):
             for s in ar_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
             item.set("ar_wait_cycles", cnt)
-            item.resize(finalize=True)
+            item.resize()
             item.set_event("control")
             self.responseQ[item.get_id()].append(item)
             await RisingEdge(self.i_f.aclk)
