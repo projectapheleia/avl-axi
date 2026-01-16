@@ -134,7 +134,7 @@ class ManagerSequence(avl.Sequence):
         if "wait_for" in kwargs:
             wait_for = kwargs["wait_for"]
         else:
-            wait_for = self.wait_for
+            wait_for = self.wait_for or "response"
 
         return await self._send_(item, randomize=False, wait_for=wait_for)
 
@@ -161,7 +161,7 @@ class ManagerSequence(avl.Sequence):
         if "wait_for" in kwargs:
             wait_for = kwargs["wait_for"]
         else:
-            wait_for = self.wait_for
+            wait_for = self.wait_for or "response"
 
         return await self._send_(item, randomize=False, wait_for=wait_for)
 
