@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.4.1] - 2026-01-18
+
+### Added
+
+ - (https://github.com/projectapheleia/avl-axi/pull/16) feat: write()/read() wait for response by default
+
 ## [v0.4.0] - 2026-01-06
 
 ### Fixed
