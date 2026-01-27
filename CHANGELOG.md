@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.4.2] - 2026-01-27
+
+### Fixed
+
+ - [#17](https://github.com/projectapheleia/avl-axi/issues/17) get_burst_addresses doesn't handle unaligned accesses for incrementing bursts
+ - [#19](https://github.com/projectapheleia/avl-axi/issues/19) Unaligned reads return unexpected data
+
 ## [v0.4.1] - 2026-01-18
 
 ### Added
