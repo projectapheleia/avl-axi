@@ -355,7 +355,8 @@ class SubordinateMemory(avl.Memory):
 
                 if self._check_address_(a):
                     num_bytes = 2**(item.get("arsize", default=0))
-                    item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
+                    aligned_addr = a & ~(num_bytes-1)
+                    item.set("rdata", self.read(aligned_addr, num_bytes=num_bytes), idx=i)
                     item.set("rresp", axi_resp_t.OKAY, idx=i)
                 else:
                     item.set("rdata", axi_resp_t.OKAY, idx=i)

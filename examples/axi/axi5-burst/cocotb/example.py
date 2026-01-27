@@ -22,6 +22,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         # Writes
         await self.write(awaddr=0x1000, awid=0, awlen=7, awsize=2, awburst=axi_burst_t.INCR, wdata=[0,1,2,3,4,5,6,7], wstrb=[0xF]*8)
         await self.write(awaddr=0x2020, awid=1, awlen=15, awsize=2, awburst=axi_burst_t.WRAP, wdata=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], wstrb=[0xF]*16)
+        # Unaligned write burst
+        await self.write(awaddr=0x2801, awid=1, awlen=15, awsize=2, awburst=axi_burst_t.INCR, wdata=[0xFFFF_FFFF,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], wstrb=[0xF]*16)
 
         # Check
         rsp = await self.read(araddr=0x1004, arid=1, arlen=7, arsize=2, arburst=axi_burst_t.FIXED)
@@ -39,6 +41,25 @@ class DirectedSequence(avl_axi.ManagerSequence):
                                             0x00, 0x01, 0x02, 0x03,
                                             0x04, 0x05, 0x06, 0x07]
 
+        # Only the first beat is affected by the unaligned address.
+        rsp = await self.read(araddr=0x2800, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        # Same read as above, but unaligned, expect the same data.
+        rsp = await self.read(araddr=0x2801, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        rsp = await self.read(araddr=0x2802, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        rsp = await self.read(araddr=0x2803, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        rsp = await self.read(araddr=0x2804, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
+
+        rsp = await self.read(araddr=0x2805, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
 
 class example_env(avl.Env):
 
