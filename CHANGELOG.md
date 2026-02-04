@@ -1,5 +1,9 @@
 # Changelog
 
+### Fixed
+
+ - [#20](https://github.com/projectapheleia/avl-axi/pull/20) fix(avl): Update calls to set_event to match new api 
+
 ## [v0.4.2] - 2026-01-27
 
 ### Fixed

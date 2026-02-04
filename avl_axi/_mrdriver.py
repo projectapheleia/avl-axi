@@ -112,7 +112,7 @@ class ManagerReadDriver(Driver):
             await self.quiesce_control()
 
             # Inform sequence control phase is completed
-            item.set_event("control", item)
+            item.set_event("control")
 
     async def quiesce_data(self) -> None:
         """
@@ -179,11 +179,11 @@ class ManagerReadDriver(Driver):
                 # Extra checks for items which have both r and b responses (atomics)
                 # Only call response callback when all completed
                 if not item.has_bresp():
-                    item.set_event("response", item)
+                    item.set_event("response")
                 else:
                     if hasattr(item, "_bresp_complete_"):
                         delattr(item, "_bresp_complete_")
-                        item.set_event("response", item)
+                        item.set_event("response")
                     else:
                         setattr(item, "_rresp_complete_", True)
 
