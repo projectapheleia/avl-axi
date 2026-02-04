@@ -124,12 +124,12 @@ class ReadMonitor(avl.Monitor):
                     # Extra checks for items which have both r and b responses (atomics)
                     # Only call response callback when all completed
                     if not item.has_bresp():
-                        item.set_event("response", item)
+                        item.set_event("response")
                         self.item_export.write(item)
                     else:
                         if hasattr(item, "_bresp_complete_"):
                             delattr(item, "_bresp_complete_")
-                            item.set_event("response", item)
+                            item.set_event("response")
                             self.item_export.write(item)
                         else:
                             setattr(item, "_rresp_complete_", True)

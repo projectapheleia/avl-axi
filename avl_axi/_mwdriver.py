@@ -127,7 +127,7 @@ class ManagerWriteDriver(Driver):
             await self.quiesce_control()
 
             # Inform sequence control phase is completed
-            item.set_event("control", item)
+            item.set_event("control")
 
     async def quiesce_data(self) -> None:
         """
@@ -177,7 +177,7 @@ class ManagerWriteDriver(Driver):
                 await self.quiesce_data()
 
             # Inform sequence data phase is complete
-            item.set_event("data", item)
+            item.set_event("data")
 
     async def quiesce_response(self) -> None:
         """
@@ -226,11 +226,11 @@ class ManagerWriteDriver(Driver):
             # Extra checks for items which have both r and b responses (atomics)
             # Only call response callback when all completed
             if not item.has_rresp():
-                item.set_event("response", item)
+                item.set_event("response")
             else:
                 if hasattr(item, "_rresp_complete_"):
                     delattr(item, "_rresp_complete_")
-                    item.set_event("response", item)
+                    item.set_event("response")
                 else:
                     setattr(item, "_bresp_complete_", True)
 

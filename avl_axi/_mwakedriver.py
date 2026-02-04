@@ -113,12 +113,12 @@ class ManagerWakeDriver(avl.Driver):
                 self._update_status_(AWAKE)
 
             # We're awake (even if we're already preparing to sleep)
-            item.set_event("awake", item)
+            item.set_event("awake")
         else:
             # All items wait to be awake - block if we are preparing to sleep
             while self.status != AWAKE:
                 await RisingEdge(self.i_f.aclk)
-            item.set_event("awake", item)
+            item.set_event("awake")
 
         self._outstanding_transactions_ += 1
 
