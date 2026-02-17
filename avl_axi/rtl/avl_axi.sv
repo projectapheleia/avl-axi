@@ -105,7 +105,19 @@ interface axi_if #(
     parameter bit WriteDeferrable_Transaction      = 0,    // True, False
     parameter bit WriteNoSnoopFull_Transaction     = 0,    // True, False
     parameter bit WriteZero_Transaction            = 0,    // True, False
-    parameter bit WSTRB_Present                    = 0     // True, False
+    parameter bit WSTRB_Present                    = 0,    // True, False
+
+    // Credit based transport
+    parameter string AXI_Transport                 = "Ready", // Ready, Credited
+    parameter bit Shared_Credits_AW                = 0,    // True, False
+    parameter bit Shared_Credits_W                 = 0,    // True, False
+    parameter bit Shared_Credits_AR                = 0,    // True, False
+    parameter int Num_RP_AWW                       = 1,
+    parameter int Num_RP_AR                        = 1,
+
+    parameter int NUM_CREDITS                      = 1,
+    parameter int NUM_SHARED_CREDITS               = 1
+
     )();
 
     // Derived parameters
@@ -115,6 +127,9 @@ interface axi_if #(
     localparam TAG_WIDTH = int'($ceil(DATA_WIDTH/128)*4);
     localparam TAGUPDATE_WIDTH = int'(TAG_WIDTH / 4);
     localparam POISON_WIDTH = int'($ceil(DATA_WIDTH/64));
+    localparam NUM_RP_AWW_WIDTH = int'($clog2(Num_RP_AWW));
+    localparam NUM_RP_AR_WIDTH = int'($clog2(Num_RP_AR));
+
 
     // Clock and Reset
     logic                                                    aclk;
@@ -160,6 +175,12 @@ interface axi_if #(
     logic [CMO_WIDTH > 0 ? CMO_WIDTH-1 : 0 :0]               awcmo;
     logic [1:0]                                              awtagop;
 
+    logic                                                    awpending;
+    logic [Num_RP_AWW > 0 ? Num_RP_AWW-1 : 0 :0]             awcrdt;
+    logic                                                    awcrdtsh;
+    logic [NUM_RP_AWW_WIDTH > 0 ? NUM_RP_AWW_WIDTH-1 : 0 :0] awrp;
+    logic                                                    awsharedcrd;
+
     // Write Data Channel (W)
     logic                                                    wvalid;
     logic                                                    wready;
@@ -171,6 +192,12 @@ interface axi_if #(
     logic [USER_DATA_WIDTH > 0 ? USER_DATA_WIDTH-1 : 0 :0]   wuser;
     logic [POISON_WIDTH > 0 ? POISON_WIDTH-1 :0 :0]          wpoison;
     logic [3:0]                                              wtrace;
+
+    logic                                                    wpending;
+    logic [Num_RP_AWW > 0 ? Num_RP_AWW-1 : 0 :0]             wcrdt;
+    logic                                                    wcrdtsh;
+    logic [NUM_RP_AWW_WIDTH > 0 ? NUM_RP_AWW_WIDTH-1 : 0 :0] wrp;
+    logic                                                    wsharedcrd;
 
     // Write Response Channel (B)
     logic                                                    bvalid;
@@ -185,6 +212,9 @@ interface axi_if #(
     logic [3:0]                                              btrace;
     logic [LOOP_W_WIDTH > 0 ? LOOP_W_WIDTH-1 :0 :0]          bloop;
     logic                                                    bbusy;
+
+    logic                                                    bpending;
+    logic                                                    bcrdt;
 
     // Read Address Channel (AR)
     logic                                                    arvalid;
@@ -221,6 +251,12 @@ interface axi_if #(
     logic                                                    aridunq;
     logic [1:0]                                              artagop;
 
+    logic                                                    arpending;
+    logic [Num_RP_AR > 0 ? Num_RP_AR-1 : 0 :0]               arcrdt;
+    logic                                                    arcrdtsh;
+    logic [NUM_RP_AR_WIDTH > 0 ? NUM_RP_AR_WIDTH-1 : 0 :0]   arrp;
+    logic                                                    arsharedcrd;
+
     // Read Data Channel (R)
     logic                                                    rvalid;
     logic                                                    rready;
@@ -238,6 +274,9 @@ interface axi_if #(
     logic [RCHUNKNUM_WIDTH > 0 ? RCHUNKNUM_WIDTH-1 : 0 :0]   rchunknum;
     logic [RCHUNKSTRB_WIDTH > 0 ? RCHUNKSTRB_WIDTH-1 : 0 :0] rchunkstrb;
     logic                                                    rbusy;
+
+    logic                                                    rpending;
+    logic                                                    rcrdt;
 
     // Snoop channels
     logic                                                    acvalid;
@@ -327,6 +366,37 @@ interface axi_if #(
 
         if (DVM_Message_Support != "False")
             assert(Shareable_Transactions) else $error("Shareable_Transactions must be 1");
+
+        // Credits
+        assert (AXI_Transport == "Ready" || AXI_Transport == "Credited") else $error("AXI_Transport must be Ready or Credited");
+
+        if (AXI_Transport != "Credited") begin
+            assert(Shared_Credits_AW == 0) else $error("Shared_Credits_AW must be 0");
+            assert(Shared_Credits_W == 0) else $error("Shared_Credits_W must be 0");
+            assert(Shared_Credits_AR == 0) else $error("Shared_Credits_AR must be 0");
+            assert(Num_RP_AWW == 1) else $error("Num_RP_AWW must be 1");
+            assert(Num_RP_AR == 1) else $error("Num_RP_AWW must be 1");
+        end
+        else begin
+            assert(Wakeup_Signals == 0) else $error("Wakeup_Signals must be 0");
+
+            assert ((Num_RP_AWW >= 1) && (Num_RP_AWW <= 8)) else $error("Num_RP_AWW must be >=1 and <= 8");
+            assert ((Num_RP_AR >= 1) && (Num_RP_AR <= 8)) else $error("Num_RP_AR must be >=1 and <= 8");
+
+            if (Num_RP_AWW == 1) begin
+                assert((Shared_Credits_AW == 0) && (Shared_Credits_W == 0)) else $error("Shared_Credits_AW and Shared_Credits_W must be 0");
+            end
+
+            if (Num_RP_AR == 1) begin
+                assert((Shared_Credits_AR == 0)) else $error("Shared_Credits_AR must be 0");
+            end
+
+            // TODO : Shared Credits
+            assert(Shared_Credits_AW == 0) else $error("Shared_Credits_AW must be 0 (implementation limitation)");
+            assert(Shared_Credits_W == 0) else $error("Shared_Credits_W must be 0 (implementation limitation)");
+            assert(Shared_Credits_AR == 0) else $error("Shared_Credits_AR must be 0 (implementation limitation)");
+
+        end
     end
 
     // Generate configuration checks
@@ -379,6 +449,12 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((CMO_On_Write == 0), awcmo)
         `AVL_AXI5_IMPL_CHECK((MTE_Support == "False"), awtagop)
 
+        `AVL_AXI5_IMPL_CHECK((1'b1), awpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), awcrdt)
+        `AVL_AXI5_IMPL_CHECK((Shared_Credits_AW == 0), awcrdtsh)
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), awrp)
+        `AVL_AXI5_IMPL_CHECK((Shared_Credits_AW == 0), awsharedcrd)
+
         // Write Data Channel
         `AVL_AXI5_IMPL_CHECK((WSTRB_Present == 0), wstrb)
         `AVL_AXI5_IMPL_CHECK((MTE_Support == "False"), wtag)
@@ -387,6 +463,12 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((USER_DATA_WIDTH == 0), wuser)
         `AVL_AXI5_IMPL_CHECK((Poison == 0), wpoison)
         `AVL_AXI5_IMPL_CHECK((Trace_Signals == 0), wtrace)
+
+        `AVL_AXI5_IMPL_CHECK((1'b1), wpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), wcrdt)
+        `AVL_AXI5_IMPL_CHECK((Shared_Credits_W == 0), wcrdtsh)
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), wrp)
+        `AVL_AXI5_IMPL_CHECK((Shared_Credits_W == 0), wsharedcrd)
 
         // Write Response Channel
         `AVL_AXI5_IMPL_CHECK((ID_W_WIDTH == 0), bid)
@@ -399,6 +481,9 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Trace_Signals == 0), btrace)
         `AVL_AXI5_IMPL_CHECK((Loopback_Signals == 0 || LOOP_W_WIDTH == 0), bloop)
         `AVL_AXI5_IMPL_CHECK((Busy_Support == 0), bbusy)
+
+        `AVL_AXI5_IMPL_CHECK((1'b1), bpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), bcrdt)
 
         // Read Address Channel
         `AVL_AXI5_IMPL_CHECK((ID_R_WIDTH == 0), arid)
@@ -432,6 +517,12 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Unique_ID_Support == 0), aridunq)
         `AVL_AXI5_IMPL_CHECK((MTE_Support == "False"), artagop)
 
+        `AVL_AXI5_IMPL_CHECK((1'b1), arpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), arcrdt)
+        `AVL_AXI5_IMPL_CHECK((Shared_Credits_AR == 0), arcrdtsh)
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), arrp)
+        `AVL_AXI5_IMPL_CHECK((Shared_Credits_AR == 0), arsharedcrd)
+
         // Read Data Channel
         `AVL_AXI5_IMPL_CHECK((ID_R_WIDTH == 0), rid)
         `AVL_AXI5_IMPL_CHECK((Unique_ID_Support == 0), ridunq)
@@ -446,6 +537,9 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Read_Data_Chunking == 0 || RCHUNKNUM_WIDTH == 0), rchunknum)
         `AVL_AXI5_IMPL_CHECK((Read_Data_Chunking == 0 || RCHUNKSTRB_WIDTH == 0), rchunkstrb)
         `AVL_AXI5_IMPL_CHECK((Busy_Support == 0), rbusy)
+
+        `AVL_AXI5_IMPL_CHECK((1'b1), rpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), rcrdt)
 
         // Snoop Signals
         `AVL_AXI5_IMPL_CHECK((DVM_Message_Support == 0), acvalid)

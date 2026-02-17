@@ -42,11 +42,16 @@ aw_m_signals = [
     "awcmo",
     "awtagop",
     "awmecid",
+    "awpending",
+    "awrp",
+    "awsharedcrd",
 ]
 
 #: AW Subordinate Signals
 aw_s_signals = [
     "awready",
+    "awcrdt",
+    "awcrdtsh",
 ]
 
 #: W Manager Signals
@@ -60,16 +65,23 @@ w_m_signals = [
     "wuser",
     "wpoison",
     "wtrace",
+    "wpending",
+    "wrp",
+    "wsharedcrd",
 ]
 
 #: W Subordinate Signals
 w_s_signals = [
     "wready",
+    "wcrdt",
+    "wcrdtsh",
 ]
 
 #: B Manager Signals
 b_m_signals = [
     "bready",
+    "bcrdt",
+    "bcrdtsh",
 ]
 
 #: B Subordinate Signals
@@ -120,16 +132,23 @@ ar_m_signals = [
     "aridunq",
     "artagop",
     "armecid",
+    "arpending",
+    "arrp",
+    "arsharedcrd",
 ]
 
 #: AR Subordinate Signals
 ar_s_signals = [
     "arready",
+    "arcrdt",
+    "arcrdtsh",
 ]
 
 #: R Manager Signals
 r_m_signals = [
     "rready",
+    "rcrdt",
+    "rcrdtsh",
 ]
 
 #: R Subordinate Signals

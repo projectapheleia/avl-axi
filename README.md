@@ -88,6 +88,9 @@ Of the advanced features full support of exclusives and atomic operation are pro
 | WriteNoSnoopFull_Transaction | SIDEBAND |
 | WriteZero_Transaction | SIDEBAND |
 | WSTRB_Present | SIDEBAND |
+| AXI_Transport | YES |
+| Num_RP | YES |
+| Shared_Credits | NO |
 
 ## Component Features
 

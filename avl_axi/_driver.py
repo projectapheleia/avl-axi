@@ -40,6 +40,9 @@ class Driver(avl.Driver):
         self.response_rate_limit = avl.Factory.get_variable(f"{self.get_full_name()}.response_rate_limit", lambda : 1.0)
         """Rate limit for driving accept signals. lambda function (0.0 - 1.0)"""
 
+        self.credit_rate_limit = avl.Factory.get_variable(f"{self.get_full_name()}.credit_rate_limit", lambda : 1.0)
+        """Rate limit for driving credit signals. lambda function (0.0 - 1.0)"""
+
         self.max_outstanding = avl.Factory.get_variable(f"{self.get_full_name()}.max_outstanding", None)
         """Maximum number of outstanding transactions"""
 
@@ -52,6 +55,9 @@ class Driver(avl.Driver):
         if not callable(self.response_rate_limit):
             raise TypeError("response rate_limit must be a callable (lambda function) that returns a float between 0.0 and 1.0")
 
+        if not callable(self.credit_rate_limit):
+            raise TypeError("credit rate_limit must be a callable (lambda function) that returns a float between 0.0 and 1.0")
+
         # Keep track of active ids
         self._unique_ids_ = {}
         self._tag_ids_ = {}
@@ -61,6 +67,9 @@ class Driver(avl.Driver):
 
         # Keep track of outstanding transactions - dict to make atomic addition and removal easy
         self._outstanding_transactions_ = 0
+
+        # Credits
+        self.credits = {"control" : {}, "data" : {}, "response" : {}}
 
         # Running tasks
         self.tasks = []
@@ -116,6 +125,20 @@ class Driver(avl.Driver):
         """
         while random.random() > rate:
             await RisingEdge(self.i_f.aclk)
+
+    async def wait_on_credit(self, credit : str, rp : int) -> None:
+        """
+        Wait based on a credit
+
+        :param credit
+        :type credit: string
+        :param rp
+        :type rp: int
+        :return: None
+        """
+        if self.i_f.AXI_Transport == "Credited":
+            while self.credits[credit][rp] == 0:
+                await RisingEdge(self.i_f.aclk)
 
     async def wait_on_reset(self) -> None:
         """
@@ -204,6 +227,18 @@ class Driver(avl.Driver):
         """
         raise NotImplementedError("Drive method must be implemented in subclasses")
 
+    async def monitor_credits(self) -> None:
+        """
+        Monitor credits
+        """
+        raise NotImplementedError("Monitor method must be implemented in subclasses")
+
+    async def drive_credits(self) -> None:
+        """
+        Drive credits
+        """
+        raise NotImplementedError("Drive method must be implemented in subclasses")
+
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """
         Get the next sequence item.
@@ -240,7 +275,8 @@ class Driver(avl.Driver):
             self.tasks.append(cocotb.start_soon(self.drive_control()))
             self.tasks.append(cocotb.start_soon(self.drive_data()))
             self.tasks.append(cocotb.start_soon(self.drive_response()))
-
+            self.tasks.append(cocotb.start_soon(self.monitor_credits()))
+            self.tasks.append(cocotb.start_soon(self.drive_credits()))
             await self.wait_on_reset()
 
             for t in self.tasks:

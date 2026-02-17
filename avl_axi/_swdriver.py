@@ -8,6 +8,7 @@ import random
 import avl
 import cocotb
 from cocotb.triggers import RisingEdge
+import random
 
 from ._driver import Driver
 from ._item import SequenceItem, WriteItem
@@ -61,6 +62,9 @@ class SubordinateWriteDriver(Driver):
 
         # QOS Accept
         self.i_f.set("vawqosaccept", self.qosaccept)
+
+        # TODO : Credited Pending Signals not supported
+        self.i_f.set("bpending", 1)
 
     async def _wait_for_data_(self) -> None:
         """
@@ -201,6 +205,9 @@ class SubordinateWriteDriver(Driver):
             # Exclusive monitor
             self.emonitor.process_write(item)
 
+            # Credit Control
+            await self.wait_on_credit("response", 0)
+
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
 
@@ -212,10 +219,81 @@ class SubordinateWriteDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("bready"):
+                if self.i_f.get("bready", default=1):
                     break
 
             await self. quiesce_response()
+
+    async def monitor_credits(self) -> None:
+        """
+        Monitor credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                self.credits["response"][0] = 0
+            else:
+                # Control
+                if self.i_f.get("awvalid", default=0) == 1:
+                    self.credits["control"][int(self.i_f.get("awrp", default=0))] += 1
+
+                awcrdt = int(self.i_f.get("awcrdt", default=0))
+                for i in range(self.i_f.Num_RP_AWW):
+                    if (awcrdt >> i ) & 0x1 == 1:
+                        self.credits["control"][i] -= 1
+
+                    assert self.credits["control"][i] >= 0 and self.credits["control"][i] <= self.i_f.NUM_CREDITS
+
+                # Data
+                if self.i_f.get("wvalid", default=0) == 1:
+                    self.credits["data"][int(self.i_f.get("wrp", default=0))] += 1
+
+                wcrdt = int(self.i_f.get("wcrdt", default=0))
+                for i in range(self.i_f.Num_RP_AWW):
+                    if (wcrdt >> i ) & 0x1 == 1:
+                        self.credits["data"][i] -= 1
+
+                    assert self.credits["data"][i] >= 0 and self.credits["data"][i] <= self.i_f.NUM_CREDITS
+
+                # Response
+                if self.i_f.get("bvalid", default=0) == 1:
+                    self.credits["response"][0] -= 1
+
+                if self.i_f.get("bcrdt", default=0) == 1:
+                    self.credits["response"][0] += 1
+
+                assert self.credits["response"][0] >= 0 and self.credits["response"][0] <= self.i_f.NUM_CREDITS
+
+    async def drive_credits(self) -> None:
+        """
+        Drive credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                for i in range(self.i_f.Num_RP_AWW):
+                    self.credits["control"][i] = self.i_f.NUM_CREDITS
+                    self.credits["data"][i] = self.i_f.NUM_CREDITS
+            else:
+                if self.credits["control"][0] > 0  and random.random() <= self.credit_rate_limit():
+                    self.i_f.set("awcrdt", 1)
+                else:
+                    self.i_f.set("awcrdt", 0)
+
+                if self.credits["data"][0] > 0  and random.random() <= self.credit_rate_limit():
+                    self.i_f.set("wcrdt", 1)
+                else:
+                    self.i_f.set("wcrdt", 0)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """

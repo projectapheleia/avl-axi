@@ -91,12 +91,22 @@ parameters = [
     "WriteNoSnoopFull_Transaction",
     "WriteZero_Transaction",
     "WSTRB_Present",
+    "AXI_Transport",
+    "Shared_Credits_AW",
+    "Shared_Credits_W",
+    "Shared_Credits_AR",
+    "Num_RP_AWW",
+    "Num_RP_AR",
+    "NUM_CREDITS",
+    "NUM_SHARED_CREDITS",
     "STRB_WIDTH",
     "RUSER_WIDTH",
     "CMO_WIDTH",
     "TAG_WIDTH",
     "TAGUPDATE_WIDTH",
     "POISON_WIDTH",
+    "NUM_RP_AWW_WIDTH",
+    "NUM_RP_AR_WIDTH",
 ]
 
 class Interface:
@@ -354,6 +364,43 @@ class Interface:
             delattr(self, "syscoreq")
             delattr(self, "syscoack")
 
+        if self.AXI_Transport != "Credited":
+            delattr(self, "awpending")
+            delattr(self, "awcrdt")
+            delattr(self, "awrp")
+
+            delattr(self, "wpending")
+            delattr(self, "wcrdt")
+            delattr(self, "wrp")
+
+            delattr(self, "bpending")
+            delattr(self, "bcrdt")
+
+            delattr(self, "arpending")
+            delattr(self, "arcrdt")
+            delattr(self, "arrp")
+
+            delattr(self, "rpending")
+            delattr(self, "rcrdt")
+
+        if self.Shared_Credits_AW == 0:
+            delattr(self, "awcrdtsh")
+            delattr(self, "awsharedcrd")
+
+        if self.Shared_Credits_W == 0:
+            delattr(self, "wcrdtsh")
+            delattr(self, "wsharedcrd")
+
+        if self.Shared_Credits_AR == 0:
+            delattr(self, "arcrdtsh")
+            delattr(self, "arsharedcrd")
+
+        else:
+            delattr(self, "awready")
+            delattr(self, "arready")
+            delattr(self, "wready")
+            delattr(self, "bready")
+            delattr(self, "rready")
 
         # Sanity checks
         if hasattr(self, "awlock"):

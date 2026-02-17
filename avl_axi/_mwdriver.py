@@ -6,7 +6,8 @@
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, NextTimeStep
+import random
 
 from ._driver import Driver
 from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
@@ -86,6 +87,9 @@ class ManagerWriteDriver(Driver):
             # Wake
             await item.wait_on_event("awake")
 
+            # Credit Control
+            await self.wait_on_credit("control", item.get("awrp", default=0))
+
             # Rate Limiter
             await self.wait_on_rate(self.control_rate_limit())
 
@@ -120,7 +124,7 @@ class ManagerWriteDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("awready") and self.i_f.get("awakeup", default=1):
+                if self.i_f.get("awready", default=1) and self.i_f.get("awakeup", default=1):
                     break
 
             # Clear the bus
@@ -234,6 +238,72 @@ class ManagerWriteDriver(Driver):
                 else:
                     setattr(item, "_bresp_complete_", True)
 
+    async def monitor_credits(self) -> None:
+        """
+        Monitor credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                for i in range(self.i_f.Num_RP_AWW):
+                    self.credits["control"][i] = 0
+                    self.credits["data"][i] = 0
+            else:
+                # Control
+                if self.i_f.get("awvalid", default=0) == 1:
+                    self.credits["control"][int(self.i_f.get("awrp", default=0))] -= 1
+
+                awcrdt = int(self.i_f.get("awcrdt", default=0))
+                for i in range(self.i_f.Num_RP_AWW):
+                    if (awcrdt >> i ) & 0x1 == 1:
+                        self.credits["control"][i] += 1
+
+                    assert self.credits["control"][i] >= 0 and self.credits["control"][i] <= self.i_f.NUM_CREDITS
+
+                # Data
+                if self.i_f.get("wvalid", default=0) == 1:
+                    self.credits["data"][int(self.i_f.get("wrp", default=0))] -= 1
+
+                wcrdt = int(self.i_f.get("wcrdt", default=0))
+                for i in range(self.i_f.Num_RP_AWW):
+                    if (wcrdt >> i ) & 0x1 == 1:
+                        self.credits["data"][i] += 1
+
+                    assert self.credits["data"][i] >= 0 and self.credits["data"][i] <= self.i_f.NUM_CREDITS
+
+                # Response
+                if self.i_f.get("bvalid", default=0) == 1:
+                    self.credits["response"][0] += 1
+
+                if self.i_f.get("bcrdt", default=0) == 1:
+                    self.credits["response"][0] -= 1
+
+                assert self.credits["response"][0] >= 0 and self.credits["response"][0] <= self.i_f.NUM_CREDITS
+
+    async def drive_credits(self) -> None:
+        """
+        Drive credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                self.credits["response"][0] = self.i_f.NUM_CREDITS
+            else:
+                if self.credits["response"][0] > 0 and random.random() <= self.credit_rate_limit():
+                    self.i_f.set("bcrdt", 1)
+                else:
+                    self.i_f.set("bcrdt", 0)
+
     async def run_phase(self):
         """
         Run phase for the Requester Driver.
@@ -242,12 +312,16 @@ class ManagerWriteDriver(Driver):
 
         :raises NotImplementedError: If the run phase is not implemented.
         """
+
+        # TODO : Credited Pending Signals not supported
+        self.i_f.set("awpending", 1)
+        self.i_f.set("wpending", 1)
+
         item = None
         cocotb.start_soon(super().run_phase())
 
         while True:
             item = await self.get_next_item(item)
-
             if not hasattr(item, "awaddr"):
                 continue
 
