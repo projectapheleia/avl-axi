@@ -68,9 +68,6 @@ class Driver(avl.Driver):
         # Keep track of outstanding transactions - dict to make atomic addition and removal easy
         self._outstanding_transactions_ = 0
 
-        # Credits
-        self.credits = {"control" : {}, "data" : {}, "response" : {}}
-
         # Running tasks
         self.tasks = []
 
@@ -137,7 +134,9 @@ class Driver(avl.Driver):
         :return: None
         """
         if self.i_f.AXI_Transport == "Credited":
-            while self.credits[credit][rp] == 0:
+            s = credit + "credits"
+            v = getattr(self.i_f, s)
+            while int(v[rp].value) == 0:
                 await RisingEdge(self.i_f.aclk)
 
     async def wait_on_reset(self) -> None:
@@ -227,12 +226,6 @@ class Driver(avl.Driver):
         """
         raise NotImplementedError("Drive method must be implemented in subclasses")
 
-    async def monitor_credits(self) -> None:
-        """
-        Monitor credits
-        """
-        raise NotImplementedError("Monitor method must be implemented in subclasses")
-
     async def drive_credits(self) -> None:
         """
         Drive credits
@@ -275,7 +268,6 @@ class Driver(avl.Driver):
             self.tasks.append(cocotb.start_soon(self.drive_control()))
             self.tasks.append(cocotb.start_soon(self.drive_data()))
             self.tasks.append(cocotb.start_soon(self.drive_response()))
-            self.tasks.append(cocotb.start_soon(self.monitor_credits()))
             self.tasks.append(cocotb.start_soon(self.drive_credits()))
             await self.wait_on_reset()
 

@@ -36,9 +36,6 @@ class WriteMonitor(avl.Monitor):
         for i in range(2**self.i_f.ID_W_WIDTH):
             self.responseQ[i] = avl.List()
 
-        # Credits
-        self.credits = {"control" : {}, "data" : {}, "response" : {}}
-
     def reset(self) -> None:
         """
         Reset the monitor state
@@ -190,54 +187,6 @@ class WriteMonitor(avl.Monitor):
             # Wait for next edge
             await RisingEdge(self.i_f.aclk)
 
-    async def monitor_credits(self) -> None:
-        """
-        Monitor credits
-        """
-
-        if self.i_f.AXI_Transport != "Credited":
-            return
-
-        while True:
-            await RisingEdge(self.i_f.aclk)
-
-            if self.i_f.get("aresetn") == 0:
-                for i in range(self.i_f.Num_RP_AWW):
-                     self.credits["control"][i] = 0
-                     self.credits["data"][i] = 0
-                self.credits["response"][0] = 0
-            else:
-                # Control
-                if self.i_f.get("awvalid", default=0) == 1:
-                    self.credits["control"][int(self.i_f.get("awrp", default=0))] -= 1
-
-                awcrdt = int(self.i_f.get("awcrdt", default=0))
-                for i in range(self.i_f.Num_RP_AWW):
-                    if (awcrdt >> i ) & 0x1 == 1:
-                        self.credits["control"][i] += 1
-
-                    assert self.credits["control"][i] >= 0 and self.credits["control"][i] <= self.i_f.NUM_CREDITS
-
-                # Data
-                if self.i_f.get("wvalid", default=0) == 1:
-                    self.credits["data"][int(self.i_f.get("wrp", default=0))] -= 1
-
-                wcrdt = int(self.i_f.get("wcrdt", default=0))
-                for i in range(self.i_f.Num_RP_AWW):
-                    if (wcrdt >> i ) & 0x1 == 1:
-                        self.credits["data"][i] += 1
-
-                    assert self.credits["data"][i] >= 0 and self.credits["data"][i] <= self.i_f.NUM_CREDITS
-
-                # Response
-                if self.i_f.get("bvalid", default=0) == 1:
-                    self.credits["response"][0] -= 1
-
-                if self.i_f.get("bcrdt", default=0) == 1:
-                    self.credits["response"][0] += 1
-
-                assert self.credits["response"][0] >= 0 and self.credits["response"][0] <= self.i_f.NUM_CREDITS
-
     async def run_phase(self):
         """
         Run phase for the Requester Driver.
@@ -255,7 +204,6 @@ class WriteMonitor(avl.Monitor):
             tasks.append(cocotb.start_soon(self._wait_for_data_()))
             tasks.append(cocotb.start_soon(self.monitor_control()))
             tasks.append(cocotb.start_soon(self.monitor_data()))
-            tasks.append(cocotb.start_soon(self.monitor_credits()))
 
             for i in range(2**self.i_f.ID_W_WIDTH):
                 tasks.append(cocotb.start_soon(self.monitor_response(i)))

@@ -31,9 +31,6 @@ class ReadMonitor(avl.Monitor):
         for i in range(2**self.i_f.ID_R_WIDTH):
             self.responseQ[i] = avl.List()
 
-        # Credits
-        self.credits = {"control" : {}, "data" : {}, "response" : {}}
-
     def reset(self) -> None:
         """
         Reset the monitor state
@@ -140,42 +137,6 @@ class ReadMonitor(avl.Monitor):
                 # Wait for next edge
                 await RisingEdge(self.i_f.aclk)
 
-    async def monitor_credits(self) -> None:
-        """
-        Monitor credits
-        """
-
-        if self.i_f.AXI_Transport != "Credited":
-            return
-
-        while True:
-            await RisingEdge(self.i_f.aclk)
-
-            if self.i_f.get("aresetn") == 0:
-                for i in range(self.i_f.Num_RP_AR):
-                     self.credits["control"][i] = 0
-                self.credits["response"][0] = 0
-            else:
-                # Control
-                if self.i_f.get("arvalid", default=0) == 1:
-                    self.credits["control"][int(self.i_f.get("arrp", default=0))] -= 1
-
-                arcrdt = int(self.i_f.get("arcrdt", default=0))
-                for i in range(self.i_f.Num_RP_AR):
-                    if (arcrdt >> i ) & 0x1 == 1:
-                        self.credits["control"][i] += 1
-
-                    assert self.credits["control"][i] >= 0 and self.credits["control"][i] <= self.i_f.NUM_CREDITS
-
-                # Response
-                if self.i_f.get("rvalid", default=0) == 1:
-                    self.credits["response"][0] -= 1
-
-                if self.i_f.get("rcrdt", default=0) == 1:
-                    self.credits["response"][0] += 1
-
-                assert self.credits["response"][0] >= 0 and self.credits["response"][0] <= self.i_f.NUM_CREDITS
-
     async def run_phase(self):
         """
         Run phase for the Requester Driver.
@@ -194,8 +155,6 @@ class ReadMonitor(avl.Monitor):
 
             for i in range(2**self.i_f.ID_R_WIDTH):
                 tasks.append(cocotb.start_soon(self.monitor_response(i)))
-
-            tasks.append(cocotb.start_soon(self.monitor_credits()))
 
             await self.wait_on_reset()
 

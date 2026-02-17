@@ -296,6 +296,13 @@ interface axi_if #(
     logic                                                    syscoreq;
     logic                                                    syscoack;
 
+    // Credits
+    int                                                      awcredits[Num_RP_AWW-1:0];
+    int                                                      wcredits[Num_RP_AWW-1:0];
+    int                                                      arcredits[Num_RP_AWW-1:0];
+    int                                                      bcredits[0:0];
+    int                                                      rcredits[0:0];
+
     // Initial assertions
     // Sanity Checks on conflicting / mis-configured parameters
     initial begin
@@ -561,6 +568,61 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Coherency_Connection_Signals == 0), syscoreq)
         `AVL_AXI5_IMPL_CHECK((Coherency_Connection_Signals == 0), syscoack)
 
+        if (AXI_Transport == "Credited") begin
+            always @(posedge aclk or negedge aresetn) begin
+                if (!aresetn) begin
+                    for (int i = 0; i < Num_RP_AWW; i++) begin
+                        awcredits[i] <= 0;
+                        wcredits[i] <= 0;
+                    end
+                    for (int i = 0; i < Num_RP_AR; i++) begin
+                        arcredits[i] <= 0;
+                    end
+                    bcredits[0] <= 0;
+                    rcredits[0] <= 0;
+                end
+                else begin
+                    for (int i = 0; i < Num_RP_AWW; i++) begin
+                        case ({awcrdt[i], (awvalid && (int'(awrp) == i))})
+                            2'b10: awcredits[i] <= awcredits[i] + 1;
+                            2'b01: awcredits[i] <= awcredits[i] - 1;
+                            default: begin end
+                        endcase
+                        assert ((awcredits[i] >= 0) && (awcredits[i] <= NUM_CREDITS));
+
+                        case ({wcrdt[i], (wvalid && (int'(awrp) == i))})
+                            2'b10: wcredits[i] <= wcredits[i] + 1;
+                            2'b01: wcredits[i] <= wcredits[i] - 1;
+                            default: begin end
+                        endcase
+                        assert ((wcredits[i] >= 0) && (wcredits[i] <= NUM_CREDITS));
+                    end
+
+                    for (int i = 0; i < Num_RP_AR; i++) begin
+                        case ({arcrdt[i], (arvalid && (int'(arrp) == i))})
+                            2'b10: arcredits[i] <= arcredits[i] + 1;
+                            2'b01: arcredits[i] <= arcredits[i] - 1;
+                            default: begin end
+                        endcase
+                        assert ((arcredits[i] >= 0) && (arcredits[i] <= NUM_CREDITS));
+                    end
+
+                    case ({bcrdt, bvalid})
+                        2'b10: bcredits[0] <= bcredits[0] + 1;
+                        2'b01: bcredits[0] <= bcredits[0] - 1;
+                        default: begin end
+                    endcase
+                    assert ((bcredits[0] >= 0) && (bcredits[0] <= NUM_CREDITS));
+
+                    case ({rcrdt, rvalid})
+                        2'b10: rcredits[0] <= rcredits[0] + 1;
+                        2'b01: rcredits[0] <= rcredits[0] - 1;
+                        default: begin end
+                    endcase
+                    assert ((rcredits[0] >= 0) && (rcredits[0] <= NUM_CREDITS));
+                end
+            end
+        end
     endgenerate
 
 endinterface : axi_if

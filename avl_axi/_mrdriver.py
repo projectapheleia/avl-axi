@@ -81,7 +81,7 @@ class ManagerReadDriver(Driver):
             await item.wait_on_event("awake")
 
             # Credit Control
-            await self.wait_on_credit("control", item.get("arrp", default=0))
+            await self.wait_on_credit("ar", item.get("arrp", default=0))
 
             # Rate Limiter
             await self.wait_on_rate(self.control_rate_limit())
@@ -193,41 +193,6 @@ class ManagerReadDriver(Driver):
 
             await self.quiesce_response()
 
-    async def monitor_credits(self) -> None:
-        """
-        Monitor credits
-        """
-
-        if self.i_f.AXI_Transport != "Credited":
-            return
-
-        while True:
-            await RisingEdge(self.i_f.aclk)
-
-            if self.i_f.get("aresetn") == 0:
-                for i in range(self.i_f.Num_RP_AR):
-                    self.credits["control"][i] = 0
-            else:
-                # Control
-                if self.i_f.get("arvalid", default=0) == 1:
-                    self.credits["control"][int(self.i_f.get("arrp", default=0))] -= 1
-
-                arcrdt = int(self.i_f.get("arcrdt", default=0))
-                for i in range(self.i_f.Num_RP_AR):
-                    if (arcrdt >> i ) & 0x1 == 1:
-                        self.credits["control"][i] += 1
-
-                    assert self.credits["control"][i] >= 0 and self.credits["control"][i] <= self.i_f.NUM_CREDITS
-
-                # Response
-                if self.i_f.get("rvalid", default=0) == 1:
-                    self.credits["response"][0] += 1
-
-                if self.i_f.get("rcrdt", default=0) == 1:
-                    self.credits["response"][0] -= 1
-
-                assert self.credits["response"][0] >= 0 and self.credits["response"][0] <= self.i_f.NUM_CREDITS
-
     async def drive_credits(self) -> None:
         """
         Drive credits
@@ -240,13 +205,12 @@ class ManagerReadDriver(Driver):
             await RisingEdge(self.i_f.aclk)
 
             if self.i_f.get("aresetn") == 0:
-                for i in range(self.i_f.Num_RP_AR):
-                    self.credits["response"][0] = self.i_f.NUM_CREDITS
+                continue
+
+            if int(self.i_f.get("rcredits", idx=0, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                self.i_f.set("rcrdt", 1)
             else:
-                if self.credits["response"][0] > 0 and random.random() <= self.credit_rate_limit():
-                    self.i_f.set("rcrdt", 1)
-                else:
-                    self.i_f.set("rcrdt", 0)
+                self.i_f.set("rcrdt", 0)
 
     async def run_phase(self):
         """

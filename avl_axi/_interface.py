@@ -410,7 +410,7 @@ class Interface:
             if not hasattr(self, "bresp") or len(self.bresp) < 2:
                 raise ValueError("AXI Exclusive accesses require BRESP to be 2 bits wide (minimum)")
 
-    def set(self, name : str, value : int) -> None:
+    def set(self, name : str, value : int, idx : int = None, ) -> None:
         """
         Set the value of a signal (if signal exists)
 
@@ -418,18 +418,25 @@ class Interface:
         :type name: str
         :param value: The value to set
         :type value: int
+        :param idx: The index if array
+        :type idx: int
         :return: None
         """
         signal = getattr(self, name, None)
         if signal is not None:
-            signal.value = value
+            if idx is not None:
+                signal[idx].value = value
+            else:
+                signal.value = value
 
-    def get(self, name : str, default : Any = None) -> int:
+    def get(self, name : str, idx : int = None, default : Any = None) -> int:
         """
         Get the value of a signal (if signal exists)
 
         :param name: The name of the signal
         :type name: str
+        :param idx: The index if array
+        :type idx: int
         :param default: The default value to return if signal does not exist
         :type default: Any
         :return: The value of the signal or the default value
@@ -437,7 +444,10 @@ class Interface:
         """
         signal = getattr(self, name, None)
         if signal is not None:
-            return signal.value
+            if idx is not None:
+                return signal[idx].value
+            else:
+                return signal.value
         return default
 
 __all__ = ["Interface"]
