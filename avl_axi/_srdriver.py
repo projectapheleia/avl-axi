@@ -152,7 +152,7 @@ class SubordinateReadDriver(Driver):
             item = await self.get_next_item(self.responseQ[idx])
 
             # Credit Control
-            await self.wait_on_credit("r", 0)
+            await self.wait_on_credit("r", [0])
 
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
@@ -195,11 +195,16 @@ class SubordinateReadDriver(Driver):
                 continue
 
             arcrdt = 0
-            for i in range(self.i_f.Num_RP_AWW):
+            arcrdtsh = 0
+            for i in range(self.i_f.Num_RP_AR):
                 if int(self.i_f.get("arcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
                     arcrdt |= 1 << i
 
+            if bool(self.i_f.Shared_Credits_AR) and int(self.i_f.get("arcredits", idx=self.i_f.Num_RP_AR, default=0)) < self.i_f.NUM_SHARED_CREDITS and random.random() <= self.credit_rate_limit():
+                    arcrdtsh |= 1
+
             self.i_f.set("arcrdt", arcrdt)
+            self.i_f.set("arcrdtsh", arcrdtsh)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """

@@ -206,7 +206,7 @@ class SubordinateWriteDriver(Driver):
             self.emonitor.process_write(item)
 
             # Credit Control
-            await self.wait_on_credit("b", 0)
+            await self.wait_on_credit("b", [0])
 
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
@@ -239,7 +239,9 @@ class SubordinateWriteDriver(Driver):
                 continue
 
             awcrdt = 0
+            awcrdtsh = 0
             wcrdt = 0
+            wcrdtsh = 0
             for i in range(self.i_f.Num_RP_AWW):
                 if int(self.i_f.get("awcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
                     awcrdt |= 1 << i
@@ -247,8 +249,16 @@ class SubordinateWriteDriver(Driver):
                 if int(self.i_f.get("wcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
                     wcrdt |= 1 << i
 
+            if bool(self.i_f.Shared_Credits_AW) and int(self.i_f.get("awcredits", idx=self.i_f.Num_RP_AWW, default=0)) < self.i_f.NUM_SHARED_CREDITS and random.random() <= self.credit_rate_limit():
+                awcrdtsh |= 1
+
+            if bool(self.i_f.Shared_Credits_W) and int(self.i_f.get("wcredits", idx=self.i_f.Num_RP_AWW, default=0)) < self.i_f.NUM_SHARED_CREDITS and random.random() <= self.credit_rate_limit():
+                wcrdtsh |= 1
+
             self.i_f.set("awcrdt", awcrdt)
             self.i_f.set("wcrdt", wcrdt)
+            self.i_f.set("awcrdtsh", awcrdtsh)
+            self.i_f.set("wcrdtsh", wcrdtsh)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """

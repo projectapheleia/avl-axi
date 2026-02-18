@@ -81,7 +81,10 @@ class ManagerReadDriver(Driver):
             await item.wait_on_event("awake")
 
             # Credit Control
-            await self.wait_on_credit("ar", item.get("arrp", default=0))
+            rp = [item.get("arrp", default=0)]
+            if self.i_f.Shared_Credits_AR == 1:
+                rp.append(self.i_f.Num_RP_AR)
+            sel_rp = await self.wait_on_credit("ar", rp)
 
             # Rate Limiter
             await self.wait_on_rate(self.control_rate_limit())
@@ -104,6 +107,8 @@ class ManagerReadDriver(Driver):
             for s in ar_m_signals:
                 if s == "arvalid":
                     self.i_f.set(s, 1)
+                elif s == "arsharedcrd":
+                    self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AR))
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 

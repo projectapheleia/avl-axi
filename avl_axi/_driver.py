@@ -124,7 +124,7 @@ class Driver(avl.Driver):
             while random.random() > rate:
                 await RisingEdge(self.i_f.aclk)
 
-    async def wait_on_credit(self, credit : str, rp : int) -> None:
+    async def wait_on_credit(self, credit : str, rp : list[int]) -> int:
         """
         Wait based on a credit
 
@@ -132,13 +132,23 @@ class Driver(avl.Driver):
         :type credit: string
         :param rp
         :type rp: int
-        :return: None
+        :return: Selected RP
+        :rtype: int
         """
         if self.i_f.AXI_Transport == "Credited":
+            sel = []
             s = credit + "credits"
             v = getattr(self.i_f, s)
-            while int(v[rp].value) == 0:
-                await RisingEdge(self.i_f.aclk)
+
+            while True:
+                for i in rp:
+                    if int(v[i].value) > 0:
+                        sel.append(i)
+
+                if len(sel) > 0:
+                    return random.choice(sel)
+                else:
+                    await RisingEdge(self.i_f.aclk)
 
     async def wait_on_reset(self) -> None:
         """

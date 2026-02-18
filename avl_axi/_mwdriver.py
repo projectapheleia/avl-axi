@@ -88,7 +88,10 @@ class ManagerWriteDriver(Driver):
             await item.wait_on_event("awake")
 
             # Credit Control
-            await self.wait_on_credit("aw", item.get("awrp", default=0))
+            rp = [item.get("awrp", default=0)]
+            if self.i_f.Shared_Credits_AW == 1:
+                rp.append(self.i_f.Num_RP_AWW)
+            sel_rp = await self.wait_on_credit("aw", rp)
 
             # Rate Limiter
             await self.wait_on_rate(self.control_rate_limit())
@@ -115,6 +118,8 @@ class ManagerWriteDriver(Driver):
             for s in aw_m_signals:
                 if s == "awvalid":
                     self.i_f.set(s, 1)
+                elif s == "awsharedcrd":
+                    self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AWW))
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 
@@ -162,7 +167,10 @@ class ManagerWriteDriver(Driver):
                 self.i_f.set("wvalid", 0)
 
                 # Credit Control
-                await self.wait_on_credit("w", item.get("wrp", idx=i, default=0))
+                rp = [item.get("wwrp", default=0)]
+                if self.i_f.Shared_Credits_W == 1:
+                    rp.append(self.i_f.Num_RP_AWW)
+                sel_rp = await self.wait_on_credit("w", rp)
 
                 # Rate Limiter
                 await self.wait_on_rate(self.data_rate_limit())
@@ -172,6 +180,8 @@ class ManagerWriteDriver(Driver):
                         self.i_f.set(s, 1)
                     elif s == "wlast":
                         self.i_f.set(s, i == item.get_len())
+                    elif s == "wsharedcrd":
+                        self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AWW))
                     else:
                         self.i_f.set(s, item.get(s, idx=i, default=0))
 

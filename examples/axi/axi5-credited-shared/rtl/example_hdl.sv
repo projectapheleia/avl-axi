@@ -10,7 +10,7 @@ module example_hdl();
             .Shared_Credits_W(1),
             .Shared_Credits_AR(1),
             .NUM_CREDITS(2),
-            .NUM_SHARED_CREDITS(2),
+            .NUM_SHARED_CREDITS(4),
             .ADDR_WIDTH(16),
             .DATA_WIDTH(32),
             .ID_W_WIDTH(4),

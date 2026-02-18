@@ -90,7 +90,7 @@ Of the advanced features full support of exclusives and atomic operation are pro
 | WSTRB_Present | SIDEBAND |
 | AXI_Transport | YES |
 | Num_RP | YES |
-| Shared_Credits | NO |
+| Shared_Credits | YES |
 
 ## Component Features
 
