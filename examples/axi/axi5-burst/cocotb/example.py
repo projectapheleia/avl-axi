@@ -102,6 +102,7 @@ async def test(dut):
     avl.Factory.set_variable("*.agent.mwdrv.response_rate_limit", lambda: 0.5)
     avl.Factory.set_variable("*.agent.srdrv.control_rate_limit", lambda: 0.1)
     avl.Factory.set_variable("*.agent.mrdrv.response_rate_limit", lambda: 0.1)
+    avl.Factory.set_variable("*.agent.*.pending_rate_limit", lambda: 0.5)
 
     # Define memory range
     avl.Factory.set_variable("*.agent.cfg.subordinate_ranges", [(0x0000, 0x2FFF)])

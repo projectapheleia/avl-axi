@@ -63,9 +63,6 @@ class SubordinateWriteDriver(Driver):
         # QOS Accept
         self.i_f.set("vawqosaccept", self.qosaccept)
 
-        # TODO : Credited Pending Signals not supported
-        self.i_f.set("bpending", 1)
-
     async def _wait_for_data_(self) -> None:
         """
         Wait for  the wdata to populate control items
@@ -183,7 +180,8 @@ class SubordinateWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in b_s_signals:
-            self.i_f.set(s, 0)
+            if s != "bpending":
+                self.i_f.set(s, 0)
 
     async def drive_response(self) -> None:
         """
@@ -211,9 +209,17 @@ class SubordinateWriteDriver(Driver):
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
 
+           # Pending
+            if not bool(self.i_f.get("bpending", default=1)):
+                self.i_f.set("bpending", 1)
+                await RisingEdge(self.i_f.aclk)
+
             for s in b_s_signals:
                 if s in ["bvalid"]:
                     self.i_f.set(s, 1)
+                elif s == "bpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 

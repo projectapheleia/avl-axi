@@ -96,6 +96,7 @@ b_s_signals = [
     "btrace",
     "bloop",
     "bbusy",
+    "bpending",
 ]
 
 #: AR Manager Signals
@@ -167,6 +168,7 @@ r_s_signals = [
     "rchunknum",
     "rchunkstrb",
     "rbusy",
+    "rpending",
 ]
 
 #: Function to indicate if a signal should be randomized (performance optimization)

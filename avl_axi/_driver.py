@@ -43,6 +43,9 @@ class Driver(avl.Driver):
         self.credit_rate_limit = avl.Factory.get_variable(f"{self.get_full_name()}.credit_rate_limit", lambda : 1.0)
         """Rate limit for driving credit signals. lambda function (0.0 - 1.0)"""
 
+        self.pending_rate_limit = avl.Factory.get_variable(f"{self.get_full_name()}.pending_rate_limit", lambda : 1.0)
+        """Rate limit for driving pending signals. lambda function (0.0 - 1.0)"""
+
         self.max_outstanding = avl.Factory.get_variable(f"{self.get_full_name()}.max_outstanding", None)
         """Maximum number of outstanding transactions"""
 

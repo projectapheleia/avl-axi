@@ -65,7 +65,8 @@ class ManagerWriteDriver(Driver):
         """
 
         for s in aw_m_signals:
-            self.i_f.set(s, 0)
+            if s != "awpending":
+                self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
         """
@@ -115,11 +116,19 @@ class ManagerWriteDriver(Driver):
                 await RisingEdge(self.i_f.aclk)
             self._outstanding_transactions_ += 1
 
+            # Pending
+            if not bool(self.i_f.get("awpending")):
+                self.i_f.set("awpending", 1)
+                await RisingEdge(self.i_f.aclk)
+
             for s in aw_m_signals:
                 if s == "awvalid":
                     self.i_f.set(s, 1)
                 elif s == "awsharedcrd":
                     self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AWW))
+                elif s == "awpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 
@@ -145,7 +154,8 @@ class ManagerWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in w_m_signals:
-            self.i_f.set(s, 0)
+            if s != "wpending":
+                self.i_f.set(s, 0)
 
     async def drive_data(self) -> None:
         """
@@ -175,6 +185,11 @@ class ManagerWriteDriver(Driver):
                 # Rate Limiter
                 await self.wait_on_rate(self.data_rate_limit())
 
+                # Pending
+                if not bool(self.i_f.get("arpending")):
+                    self.i_f.set("wpending", 1)
+                    await RisingEdge(self.i_f.aclk)
+
                 for s in w_m_signals:
                     if s == "wvalid":
                         self.i_f.set(s, 1)
@@ -182,6 +197,9 @@ class ManagerWriteDriver(Driver):
                         self.i_f.set(s, i == item.get_len())
                     elif s == "wsharedcrd":
                         self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AWW))
+                    elif s == "wpending":
+                        if random.random() > self.pending_rate_limit():
+                            self.i_f.set(s, 0)
                     else:
                         self.i_f.set(s, item.get(s, idx=i, default=0))
 
@@ -278,10 +296,6 @@ class ManagerWriteDriver(Driver):
 
         :raises NotImplementedError: If the run phase is not implemented.
         """
-
-        # TODO : Credited Pending Signals not supported
-        self.i_f.set("awpending", 1)
-        self.i_f.set("wpending", 1)
 
         item = None
         cocotb.start_soon(super().run_phase())

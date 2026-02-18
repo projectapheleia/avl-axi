@@ -450,7 +450,7 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((CMO_On_Write == 0), awcmo)
         `AVL_AXI5_IMPL_CHECK((MTE_Support == "False"), awtagop)
 
-        `AVL_AXI5_IMPL_CHECK((1'b1), awpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), awpending)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), awcrdt)
         `AVL_AXI5_IMPL_CHECK((Shared_Credits_AW == 0), awcrdtsh)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), awrp)
@@ -465,7 +465,7 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Poison == 0), wpoison)
         `AVL_AXI5_IMPL_CHECK((Trace_Signals == 0), wtrace)
 
-        `AVL_AXI5_IMPL_CHECK((1'b1), wpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), wpending)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), wcrdt)
         `AVL_AXI5_IMPL_CHECK((Shared_Credits_W == 0), wcrdtsh)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), wrp)
@@ -483,7 +483,7 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Loopback_Signals == 0 || LOOP_W_WIDTH == 0), bloop)
         `AVL_AXI5_IMPL_CHECK((Busy_Support == 0), bbusy)
 
-        `AVL_AXI5_IMPL_CHECK((1'b1), bpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), bpending)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), bcrdt)
 
         // Read Address Channel
@@ -518,7 +518,7 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Unique_ID_Support == 0), aridunq)
         `AVL_AXI5_IMPL_CHECK((MTE_Support == "False"), artagop)
 
-        `AVL_AXI5_IMPL_CHECK((1'b1), arpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), arpending)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), arcrdt)
         `AVL_AXI5_IMPL_CHECK((Shared_Credits_AR == 0), arcrdtsh)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), arrp)
@@ -539,7 +539,7 @@ interface axi_if #(
         `AVL_AXI5_IMPL_CHECK((Read_Data_Chunking == 0 || RCHUNKSTRB_WIDTH == 0), rchunkstrb)
         `AVL_AXI5_IMPL_CHECK((Busy_Support == 0), rbusy)
 
-        `AVL_AXI5_IMPL_CHECK((1'b1), rpending) // TODO
+        `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), rpending)
         `AVL_AXI5_IMPL_CHECK((AXI_Transport != "Credited"), rcrdt)
 
         // Snoop Signals

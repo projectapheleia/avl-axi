@@ -60,9 +60,6 @@ class SubordinateReadDriver(Driver):
         # QOS Accept
         self.i_f.set("varqosaccept", self.qosaccept)
 
-        # TODO : Credited Pending Signals not supported
-        self.i_f.set("rpending", 1)
-
     async def quiesce_control(self) -> None:
         """
         Quiesce the control channel by setting all control signals to their default values.
@@ -132,7 +129,8 @@ class SubordinateReadDriver(Driver):
         By default 0's all response signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in r_s_signals:
-            self.i_f.set(s, 0)
+            if s != "rpending":
+                self.i_f.set(s, 0)
 
     async def drive_response(self) -> None:
         """
@@ -157,11 +155,19 @@ class SubordinateReadDriver(Driver):
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
 
+            # Pending
+            if not bool(self.i_f.get("rpending", default=1)):
+                self.i_f.set("rpending", 1)
+                await RisingEdge(self.i_f.aclk)
+
             for s in r_s_signals:
                 if s == "rvalid":
                     self.i_f.set(s, 1)
                 elif s == "rlast":
                     self.i_f.set(s, item._rcnt_ == item.get_len())
+                elif s == "rpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, idx=item._rcnt_, default=0))
 

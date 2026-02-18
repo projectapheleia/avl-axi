@@ -58,7 +58,8 @@ class ManagerReadDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in ar_m_signals:
-            self.i_f.set(s, 0)
+            if s != "arpending":
+                self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
         """
@@ -104,11 +105,19 @@ class ManagerReadDriver(Driver):
                 await RisingEdge(self.i_f.aclk)
             self._outstanding_transactions_ += 1
 
+            # Pending
+            if not bool(self.i_f.get("arpending", default=1)):
+                self.i_f.set("arpending", 1)
+                await RisingEdge(self.i_f.aclk)
+
             for s in ar_m_signals:
                 if s == "arvalid":
                     self.i_f.set(s, 1)
                 elif s == "arsharedcrd":
                     self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AR))
+                elif s == "arpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 
@@ -225,9 +234,6 @@ class ManagerReadDriver(Driver):
 
         :raises NotImplementedError: If the run phase is not implemented.
         """
-
-        # TODO : Credited Pending Signals not supported
-        self.i_f.set("arpending", 1)
 
         item = None
         cocotb.start_soon(super().run_phase())
