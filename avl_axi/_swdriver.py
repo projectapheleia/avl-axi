@@ -160,7 +160,7 @@ class SubordinateWriteDriver(Driver):
                 await RisingEdge(self.i_f.aclk)
 
             # Rate Limiter
-            await self.wait_on_rate(self.control_rate_limit())
+            await self.wait_on_rate(self.data_rate_limit())
 
             self.i_f.set("wready", 1)
 
@@ -238,15 +238,17 @@ class SubordinateWriteDriver(Driver):
             if self.i_f.get("aresetn") == 0:
                 continue
 
-            if int(self.i_f.get("awcredits", idx=0, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
-                self.i_f.set("awcrdt", 1)
-            else:
-                self.i_f.set("awcrdt", 0)
+            awcrdt = 0
+            wcrdt = 0
+            for i in range(self.i_f.Num_RP_AWW):
+                if int(self.i_f.get("awcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                    awcrdt |= 1 << i
 
-            if int(self.i_f.get("wcredits", idx=0, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
-                self.i_f.set("wcrdt", 1)
-            else:
-                self.i_f.set("wcrdt", 0)
+                if int(self.i_f.get("wcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                    wcrdt |= 1 << i
+
+            self.i_f.set("awcrdt", awcrdt)
+            self.i_f.set("wcrdt", wcrdt)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """

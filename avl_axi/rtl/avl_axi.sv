@@ -297,9 +297,9 @@ interface axi_if #(
     logic                                                    syscoack;
 
     // Credits
-    int                                                      awcredits[Num_RP_AWW-1:0];
-    int                                                      wcredits[Num_RP_AWW-1:0];
-    int                                                      arcredits[Num_RP_AWW-1:0];
+    int                                                      awcredits[Num_RP_AWW:0];
+    int                                                      wcredits[Num_RP_AWW:0];
+    int                                                      arcredits[Num_RP_AWW:0];
     int                                                      bcredits[0:0];
     int                                                      rcredits[0:0];
 
@@ -397,12 +397,6 @@ interface axi_if #(
             if (Num_RP_AR == 1) begin
                 assert((Shared_Credits_AR == 0)) else $error("Shared_Credits_AR must be 0");
             end
-
-            // TODO : Shared Credits
-            assert(Shared_Credits_AW == 0) else $error("Shared_Credits_AW must be 0 (implementation limitation)");
-            assert(Shared_Credits_W == 0) else $error("Shared_Credits_W must be 0 (implementation limitation)");
-            assert(Shared_Credits_AR == 0) else $error("Shared_Credits_AR must be 0 (implementation limitation)");
-
         end
     end
 
@@ -571,11 +565,11 @@ interface axi_if #(
         if (AXI_Transport == "Credited") begin
             always @(posedge aclk or negedge aresetn) begin
                 if (!aresetn) begin
-                    for (int i = 0; i < Num_RP_AWW; i++) begin
+                    for (int i = 0; i <= Num_RP_AWW; i++) begin
                         awcredits[i] <= 0;
                         wcredits[i] <= 0;
                     end
-                    for (int i = 0; i < Num_RP_AR; i++) begin
+                    for (int i = 0; i <= Num_RP_AR;  i++) begin
                         arcredits[i] <= 0;
                     end
                     bcredits[0] <= 0;
@@ -583,30 +577,52 @@ interface axi_if #(
                 end
                 else begin
                     for (int i = 0; i < Num_RP_AWW; i++) begin
-                        case ({awcrdt[i], (awvalid && (int'(awrp) == i))})
+                        case ({awcrdt[i], (awvalid && !awsharedcrd && (int'(awrp) == i))})
                             2'b10: awcredits[i] <= awcredits[i] + 1;
                             2'b01: awcredits[i] <= awcredits[i] - 1;
                             default: begin end
                         endcase
                         assert ((awcredits[i] >= 0) && (awcredits[i] <= NUM_CREDITS));
 
-                        case ({wcrdt[i], (wvalid && (int'(awrp) == i))})
+                        case ({wcrdt[i], (wvalid && !wsharedcrd && (int'(wrp) == i))})
                             2'b10: wcredits[i] <= wcredits[i] + 1;
                             2'b01: wcredits[i] <= wcredits[i] - 1;
                             default: begin end
                         endcase
                         assert ((wcredits[i] >= 0) && (wcredits[i] <= NUM_CREDITS));
                     end
-
+                    if (Shared_Credits_AW) begin
+                        case ({awcrdtsh, (awvalid && awsharedcrd)})
+                            2'b10: awcredits[Num_RP_AWW] <= awcredits[Num_RP_AWW] + 1;
+                            2'b01: awcredits[Num_RP_AWW] <= awcredits[Num_RP_AWW] - 1;
+                            default: begin end
+                        endcase
+                        assert ((awcredits[Num_RP_AWW] >= 0) && (awcredits[Num_RP_AWW] <= NUM_SHARED_CREDITS));
+                    end
+                    if (Shared_Credits_W) begin
+                        case ({wcrdtsh, (wvalid && wsharedcrd)})
+                            2'b10: wcredits[Num_RP_AWW] <= wcredits[Num_RP_AWW] + 1;
+                            2'b01: wcredits[Num_RP_AWW] <= wcredits[Num_RP_AWW] - 1;
+                            default: begin end
+                        endcase
+                        assert ((wcredits[Num_RP_AWW] >= 0) && (wcredits[Num_RP_AWW] <= NUM_SHARED_CREDITS));
+                    end
                     for (int i = 0; i < Num_RP_AR; i++) begin
-                        case ({arcrdt[i], (arvalid && (int'(arrp) == i))})
+                        case ({arcrdt[i], (arvalid && !arsharedcrd && (int'(arrp) == i))})
                             2'b10: arcredits[i] <= arcredits[i] + 1;
                             2'b01: arcredits[i] <= arcredits[i] - 1;
                             default: begin end
                         endcase
                         assert ((arcredits[i] >= 0) && (arcredits[i] <= NUM_CREDITS));
                     end
-
+                    if (Shared_Credits_AR) begin
+                        case ({arcrdtsh, (arvalid && arsharedcrd)})
+                            2'b10: arcredits[Num_RP_AWW] <= arcredits[Num_RP_AWW] + 1;
+                            2'b01: arcredits[Num_RP_AWW] <= arcredits[Num_RP_AWW] - 1;
+                            default: begin end
+                        endcase
+                        assert ((arcredits[Num_RP_AWW] >= 0) && (arcredits[Num_RP_AWW] <= NUM_SHARED_CREDITS));
+                    end
                     case ({bcrdt, bvalid})
                         2'b10: bcredits[0] <= bcredits[0] + 1;
                         2'b01: bcredits[0] <= bcredits[0] - 1;

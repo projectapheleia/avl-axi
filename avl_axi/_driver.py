@@ -120,8 +120,9 @@ class Driver(avl.Driver):
         :type rate: float
         :return: None
         """
-        while random.random() > rate:
-            await RisingEdge(self.i_f.aclk)
+        if self.i_f.AXI_Transport == "Ready":
+            while random.random() > rate:
+                await RisingEdge(self.i_f.aclk)
 
     async def wait_on_credit(self, credit : str, rp : int) -> None:
         """

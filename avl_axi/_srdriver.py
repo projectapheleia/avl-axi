@@ -194,10 +194,12 @@ class SubordinateReadDriver(Driver):
             if self.i_f.get("aresetn") == 0:
                 continue
 
-            if int(self.i_f.get("arcredits", idx=0, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
-                self.i_f.set("arcrdt", 1)
-            else:
-                self.i_f.set("arcrdt", 0)
+            arcrdt = 0
+            for i in range(self.i_f.Num_RP_AWW):
+                if int(self.i_f.get("arcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                    arcrdt |= 1 << i
+
+            self.i_f.set("arcrdt", arcrdt)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """
