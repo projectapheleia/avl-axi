@@ -70,7 +70,7 @@ class ReadMonitor(avl.Monitor):
                         cnt = 0
                     else:
                         cnt += 1
-                    if self.i_f.get("arready", default=0):
+                    if self.i_f.get("arready", default=1):
                         break
                 await RisingEdge(self.i_f.aclk)
 
@@ -98,7 +98,7 @@ class ReadMonitor(avl.Monitor):
                             cnt = 0
                         else:
                             cnt += 1
-                        if self.i_f.get("rready", default=0):
+                        if self.i_f.get("rready", default=1):
                             break
                     await RisingEdge(self.i_f.aclk)
 
@@ -136,7 +136,6 @@ class ReadMonitor(avl.Monitor):
 
                 # Wait for next edge
                 await RisingEdge(self.i_f.aclk)
-
 
     async def run_phase(self):
         """

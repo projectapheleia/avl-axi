@@ -1,5 +1,8 @@
 # Changelog
 
+### Added
+ - [#21](https://github.com/projectapheleia/avl-axi/issues/21) Support AXI_Transport == "Credited"
+
 ## [v0.4.2] - 2026-01-27
 
 ### Fixed

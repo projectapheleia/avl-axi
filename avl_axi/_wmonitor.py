@@ -104,7 +104,7 @@ class WriteMonitor(avl.Monitor):
                         cnt = 0
                     else:
                         cnt += 1
-                    if self.i_f.get("awready", default=0):
+                    if self.i_f.get("awready", default=1):
                         break
                 await RisingEdge(self.i_f.aclk)
 
@@ -133,7 +133,7 @@ class WriteMonitor(avl.Monitor):
                     cnt = 0
                 else:
                     cnt += 1
-                if self.i_f.get("wready", default=0):
+                if self.i_f.get("wready", default=1):
                     data = {}
                     for s in w_m_signals:
                         data[s] = self.i_f.get(s, default=0)
@@ -161,7 +161,7 @@ class WriteMonitor(avl.Monitor):
                         cnt = 0
                     else:
                         cnt += 1
-                    if self.i_f.get("bready", default=0):
+                    if self.i_f.get("bready", default=1):
                         break
                 await RisingEdge(self.i_f.aclk)
 
