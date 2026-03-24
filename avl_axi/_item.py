@@ -277,9 +277,9 @@ class SequenceItem(avl.SequenceItem):
         :return: Size
         """
         if hasattr(self, "awaddr"):
-            return int(2**self.get("awsize", default=0))
+            return int(1<<self.get("awsize", default=0))
         else:
-            return int(2**self.get("arsize", default=0))
+            return int(1<<self.get("arsize", default=0))
 
     def get_burst(self) -> int:
         """

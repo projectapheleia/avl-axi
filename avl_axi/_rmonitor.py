@@ -28,7 +28,7 @@ class ReadMonitor(avl.Monitor):
         self.i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
 
         self.responseQ = {}
-        for i in range(2**self.i_f.ID_R_WIDTH):
+        for i in range(1<<self.i_f.ID_R_WIDTH):
             self.responseQ[i] = avl.List()
 
     def reset(self) -> None:
@@ -36,7 +36,7 @@ class ReadMonitor(avl.Monitor):
         Reset the monitor state
         """
 
-        for i in range(2**self.i_f.ID_R_WIDTH):
+        for i in range(1<<self.i_f.ID_R_WIDTH):
             self.responseQ[i].clear()
 
     async def wait_on_reset(self) -> None:
@@ -154,7 +154,7 @@ class ReadMonitor(avl.Monitor):
             tasks = []
             tasks.append(cocotb.start_soon(self.monitor_control()))
 
-            for i in range(2**self.i_f.ID_R_WIDTH):
+            for i in range(1<<self.i_f.ID_R_WIDTH):
                 tasks.append(cocotb.start_soon(self.monitor_response(i)))
 
             await self.wait_on_reset()

@@ -33,7 +33,7 @@ class WriteMonitor(avl.Monitor):
         self.dataQ = avl.List()
         self.controlQ = avl.List()
         self.responseQ = {}
-        for i in range(2**self.i_f.ID_W_WIDTH):
+        for i in range(1<<self.i_f.ID_W_WIDTH):
             self.responseQ[i] = avl.List()
 
     def reset(self) -> None:
@@ -43,7 +43,7 @@ class WriteMonitor(avl.Monitor):
 
         self.dataQ.clear()
         self.controlQ.clear()
-        for i in range(2**self.i_f.ID_W_WIDTH):
+        for i in range(1<<self.i_f.ID_W_WIDTH):
             self.responseQ[i].clear()
 
     async def wait_on_reset(self) -> None:
@@ -205,7 +205,7 @@ class WriteMonitor(avl.Monitor):
             tasks.append(cocotb.start_soon(self.monitor_control()))
             tasks.append(cocotb.start_soon(self.monitor_data()))
 
-            for i in range(2**self.i_f.ID_W_WIDTH):
+            for i in range(1<<self.i_f.ID_W_WIDTH):
                 tasks.append(cocotb.start_soon(self.monitor_response(i)))
 
             await self.wait_on_reset()

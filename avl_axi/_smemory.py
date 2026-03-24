@@ -278,7 +278,7 @@ class SubordinateMemory(avl.Memory):
                                                 )):
 
             if self._check_address_(a):
-                num_bytes = 2**(item.get("awsize", default=0))
+                num_bytes = 1<<(item.get("awsize", default=0))
                 wdata = item.get("wdata", idx=i, default=0)
 
                 if hasattr(item, "awatop"):
@@ -357,7 +357,7 @@ class SubordinateMemory(avl.Memory):
                                                 )):
 
                 if self._check_address_(a):
-                    num_bytes = 2**(item.get("arsize", default=0))
+                    num_bytes = 1<<(item.get("arsize", default=0))
                     item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
                     item.set("rresp", axi_resp_t.OKAY, idx=i)
                 else:

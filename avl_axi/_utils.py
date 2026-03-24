@@ -20,7 +20,7 @@ def get_burst_addresses(base, length, size, burst):
     """
     addresses = []
     num_transfers = length + 1  # ARLEN/AWLEN is number of transfers - 1
-    transfer_size = 2 ** size   # Convert size encoding to actual bytes
+    transfer_size = 1<<size   # Convert size encoding to actual bytes
 
     if burst == 0:  # FIXED burst
         # All transfers use the same address

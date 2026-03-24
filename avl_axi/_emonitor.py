@@ -25,7 +25,7 @@ class ExclusivityMonitor(avl.Component):
         i_f = avl.Factory.get_variable(f"{self.get_full_name()}.i_f", None)
 
         self.ranges = {}
-        for i in range(2**i_f.ID_R_WIDTH):
+        for i in range(1<<i_f.ID_R_WIDTH):
             self.ranges[i] = None
 
     def _get_range_(self, item: SequenceItem) -> bool:

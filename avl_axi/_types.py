@@ -61,7 +61,7 @@ class axi_burst_t(avl.Logic):
             }
 
         for i in range(axi_burst_t.FIXED, axi_burst_t.RESERVED, 1):
-            if i > (2**self.width)-1:
+            if i > (1<<self.width)-1:
                 del d[i]
         return d
 
@@ -142,7 +142,7 @@ class axi_resp_t(avl.Logic):
             }
 
         for i in range(axi_resp_t.OKAY, axi_resp_t.UNSUPPORTED, 1):
-            if i > (2**self.width)-1:
+            if i > (1<<self.width)-1:
                 del d[i]
         return d
 
@@ -207,7 +207,7 @@ class axi_domain_t(avl.Logic):
             }
 
         for i in range(axi_domain_t.NON_SHAREABLE, axi_domain_t.SYSTEM, 1):
-            if i > (2**self.width)-1:
+            if i > (1<<self.width)-1:
                 del d[i]
 
         return d
@@ -322,7 +322,7 @@ class axi_atomic_t(avl.Logic):
             }
 
         for i in range(axi_atomic_t.NON_ATOMIC, axi_atomic_t.LOAD_BE_UMIN, 1):
-            if i > (2**self.width)-1:
+            if i > (1<<self.width)-1:
                 del d[i]
 
         return d
@@ -417,7 +417,7 @@ class axi_secsid_t(avl.Logic):
             }
 
         for i in range(axi_secsid_t.NON_SECURE, axi_secsid_t.RESERVED, 1):
-            if i > (2**self.width)-1:
+            if i > (1<<self.width)-1:
                 del d[i]
 
         return d
