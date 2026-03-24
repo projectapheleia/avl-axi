@@ -491,7 +491,7 @@ class WriteItem(SequenceItem):
                                             self.get("awsize", default=0),
                                             self.get("awburst", default=axi_burst_t.INCR))
 
-            wstrb_mask = (1 << (2**self.get("awsize", default=0))) - 1
+            wstrb_mask = (1 << (1 << self.get("awsize", default=0))) - 1
             for i,a in enumerate(addresses):
                 offset = a & (self._i_f_.DATA_WIDTH//8)-1
                 self.wstrb[i] &= (wstrb_mask << offset)
