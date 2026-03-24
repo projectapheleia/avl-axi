@@ -3,6 +3,8 @@
 # Description:
 # Apheleia Verification Library Coverage
 
+from collections.abc import MutableMapping, MutableSequence
+
 from typing import Any
 
 import avl
@@ -373,13 +375,13 @@ class Coverage(avl.Component):
         if comment is None:
             comment = signal.upper()
 
-        attr_name = f"_{signal}_" if isinstance(getattr(self.item, signal), list) else signal
+        attr_name = f"_{signal}_" if isinstance(getattr(self.item, signal), (MutableSequence | MutableMapping | tuple)) else signal
         var = getattr(self.item, attr_name)
 
         cg.add_coverpoint(signal, lambda: getattr(self.item, attr_name, None))
         cg._cps_[signal].set_comment(comment)
 
-        if isinstance(var, list):
+        if isinstance(var, MutableSequence | MutableMapping | tuple):
             for i in range(var[0].width):
                 cg._cps_[signal].add_bin(f"[{i}] == 0", lambda x, y=i : 0 == (x[1] & (1<<y)))
                 cg._cps_[signal].add_bin(f"[{i}] == 1", lambda x, y=i : 0 != (x[0] & (1<<y)))

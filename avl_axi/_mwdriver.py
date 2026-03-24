@@ -6,7 +6,8 @@
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, NextTimeStep
+import random
 
 from ._driver import Driver
 from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
@@ -64,7 +65,8 @@ class ManagerWriteDriver(Driver):
         """
 
         for s in aw_m_signals:
-            self.i_f.set(s, 0)
+            if s != "awpending":
+                self.i_f.set(s, 0)
 
     async def drive_control(self) -> None:
         """
@@ -85,6 +87,12 @@ class ManagerWriteDriver(Driver):
 
             # Wake
             await item.wait_on_event("awake")
+
+            # Credit Control
+            rp = [item.get("awrp", default=0)]
+            if self.i_f.Shared_Credits_AW == 1:
+                rp.append(self.i_f.Num_RP_AWW)
+            sel_rp = await self.wait_on_credit("aw", rp)
 
             # Rate Limiter
             await self.wait_on_rate(self.control_rate_limit())
@@ -108,9 +116,19 @@ class ManagerWriteDriver(Driver):
                 await RisingEdge(self.i_f.aclk)
             self._outstanding_transactions_ += 1
 
+            # Pending
+            if not bool(self.i_f.get("awpending")):
+                self.i_f.set("awpending", 1)
+                await RisingEdge(self.i_f.aclk)
+
             for s in aw_m_signals:
                 if s == "awvalid":
                     self.i_f.set(s, 1)
+                elif s == "awsharedcrd":
+                    self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AWW))
+                elif s == "awpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 
@@ -120,7 +138,7 @@ class ManagerWriteDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("awready") and self.i_f.get("awakeup", default=1):
+                if self.i_f.get("awready", default=1) and self.i_f.get("awakeup", default=1):
                     break
 
             # Clear the bus
@@ -136,7 +154,8 @@ class ManagerWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in w_m_signals:
-            self.i_f.set(s, 0)
+            if s != "wpending":
+                self.i_f.set(s, 0)
 
     async def drive_data(self) -> None:
         """
@@ -157,14 +176,30 @@ class ManagerWriteDriver(Driver):
             for i in range(item.get_len()+1):
                 self.i_f.set("wvalid", 0)
 
+                # Credit Control
+                rp = [item.get("wwrp", default=0)]
+                if self.i_f.Shared_Credits_W == 1:
+                    rp.append(self.i_f.Num_RP_AWW)
+                sel_rp = await self.wait_on_credit("w", rp)
+
                 # Rate Limiter
                 await self.wait_on_rate(self.data_rate_limit())
+
+                # Pending
+                if not bool(self.i_f.get("arpending")):
+                    self.i_f.set("wpending", 1)
+                    await RisingEdge(self.i_f.aclk)
 
                 for s in w_m_signals:
                     if s == "wvalid":
                         self.i_f.set(s, 1)
                     elif s == "wlast":
                         self.i_f.set(s, i == item.get_len())
+                    elif s == "wsharedcrd":
+                        self.i_f.set(s, (sel_rp == self.i_f.Num_RP_AWW))
+                    elif s == "wpending":
+                        if random.random() > self.pending_rate_limit():
+                            self.i_f.set(s, 0)
                     else:
                         self.i_f.set(s, item.get(s, idx=i, default=0))
 
@@ -234,6 +269,25 @@ class ManagerWriteDriver(Driver):
                 else:
                     setattr(item, "_bresp_complete_", True)
 
+    async def drive_credits(self) -> None:
+        """
+        Drive credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                continue
+
+            if int(self.i_f.get("bcredits", idx=0, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                self.i_f.set("bcrdt", 1)
+            else:
+                self.i_f.set("bcrdt", 0)
+
     async def run_phase(self):
         """
         Run phase for the Requester Driver.
@@ -242,12 +296,12 @@ class ManagerWriteDriver(Driver):
 
         :raises NotImplementedError: If the run phase is not implemented.
         """
+
         item = None
         cocotb.start_soon(super().run_phase())
 
         while True:
             item = await self.get_next_item(item)
-
             if not hasattr(item, "awaddr"):
                 continue
 

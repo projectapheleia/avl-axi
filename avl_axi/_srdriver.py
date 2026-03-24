@@ -7,6 +7,7 @@ import random
 
 import avl
 from cocotb.triggers import RisingEdge
+import random
 
 from ._driver import Driver
 from ._item import ReadItem, SequenceItem
@@ -98,7 +99,7 @@ class SubordinateReadDriver(Driver):
             # Send item to response phase
             for s in ar_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
-            item.resize(finalize=True)
+            item.resize()
 
             # Handle Memory Access
             if self.memory is not None:
@@ -128,7 +129,8 @@ class SubordinateReadDriver(Driver):
         By default 0's all response signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in r_s_signals:
-            self.i_f.set(s, 0)
+            if s != "rpending":
+                self.i_f.set(s, 0)
 
     async def drive_response(self) -> None:
         """
@@ -147,20 +149,31 @@ class SubordinateReadDriver(Driver):
 
             item = await self.get_next_item(self.responseQ[idx])
 
+            # Credit Control
+            await self.wait_on_credit("r", [0])
+
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
+
+            # Pending
+            if not bool(self.i_f.get("rpending", default=1)):
+                self.i_f.set("rpending", 1)
+                await RisingEdge(self.i_f.aclk)
 
             for s in r_s_signals:
                 if s == "rvalid":
                     self.i_f.set(s, 1)
                 elif s == "rlast":
                     self.i_f.set(s, item._rcnt_ == item.get_len())
+                elif s == "rpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, idx=item._rcnt_, default=0))
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("rready"):
+                if self.i_f.get("rready", default=1):
                     break
 
             # Exclusive monitor
@@ -172,6 +185,32 @@ class SubordinateReadDriver(Driver):
                 self.responseQ.pop(idx)
 
             await self. quiesce_response()
+
+    async def drive_credits(self) -> None:
+        """
+        Drive credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                continue
+
+            arcrdt = 0
+            arcrdtsh = 0
+            for i in range(self.i_f.Num_RP_AR):
+                if int(self.i_f.get("arcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                    arcrdt |= 1 << i
+
+            if bool(self.i_f.Shared_Credits_AR) and int(self.i_f.get("arcredits", idx=self.i_f.Num_RP_AR, default=0)) < self.i_f.NUM_SHARED_CREDITS and random.random() <= self.credit_rate_limit():
+                    arcrdtsh |= 1
+
+            self.i_f.set("arcrdt", arcrdt)
+            self.i_f.set("arcrdtsh", arcrdtsh)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """

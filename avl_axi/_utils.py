@@ -29,7 +29,11 @@ def get_burst_addresses(base, length, size, burst):
     elif burst == 1:  # INCR (incrementing) burst
         # Each transfer increments by transfer_size
         for i in range(num_transfers):
-            addresses.append(base + (i * transfer_size))
+            burst_address = base + (i * transfer_size)
+            # For unaligned bursts, align the address starting from the 2nd beat.
+            if (i!=0):
+                burst_address = burst_address & ~(transfer_size-1)
+            addresses.append(burst_address)
 
     elif burst == 2:  # WRAP burst
         # Calculate wrap boundary

@@ -20,28 +20,46 @@ class DirectedSequence(avl_axi.ManagerSequence):
         self.wait_for = "response"
 
         # Writes
-        await self.write(awaddr=0x1000, awid=0, awlen=7, awsize=3, awburst=1, wdata=[0,1,2,3,4,5,6,7], wstrb=[0xFF]*8)
-        await self.write(awaddr=0x2008, awid=1, awlen=15, awsize=0, awburst=2, wdata=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], wstrb=[0x1]*16)
+        await self.write(awaddr=0x1000, awid=0, awlen=7, awsize=2, awburst=axi_burst_t.INCR, wdata=[0,1,2,3,4,5,6,7], wstrb=[0xF]*8)
+        await self.write(awaddr=0x2020, awid=1, awlen=15, awsize=2, awburst=axi_burst_t.WRAP, wdata=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], wstrb=[0xF]*16)
+        # Unaligned write burst
+        await self.write(awaddr=0x2801, awid=1, awlen=15, awsize=2, awburst=axi_burst_t.INCR, wdata=[0xFFFF_FFFF,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], wstrb=[0xF]*16)
 
         # Check
-        rsp = await self.read(araddr=0x1008, arid=1, arlen=7, arsize=3, arburst=axi_burst_t.FIXED)
-        assert rsp.rdata == [1,1,1,1,1,1,1,1]
+        rsp = await self.read(araddr=0x1004, arid=1, arlen=7, arsize=2, arburst=axi_burst_t.FIXED)
+        assert list(rsp.rdata.values()) == [1,1,1,1,1,1,1,1]
 
-        rsp = await self.read(araddr=0x1000, arid=2, arlen=7, arsize=3, arburst=axi_burst_t.INCR)
-        assert rsp.rdata == [0,1,2,3,4,5,6,7]
+        rsp = await self.read(araddr=0x1000, arid=2, arlen=7, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0,1,2,3,4,5,6,7]
 
-        rsp = await self.read(araddr=0x1020, arid=3, arlen=7, arsize=3, arburst=axi_burst_t.WRAP)
-        assert rsp.rdata == [4,5,6,7,0,1,2,3]
+        rsp = await self.read(araddr=0x1010, arid=3, arlen=7, arsize=2, arburst=axi_burst_t.WRAP)
+        assert list(rsp.rdata.values()) == [4,5,6,7,0,1,2,3]
 
-        rsp = await self.read(araddr=0x2000, arid=1, arlen=0)
-        assert rsp.rdata == [0x08]
+        rsp = await self.read(araddr=0x2000, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.WRAP)
+        assert list(rsp.rdata.values()) == [0x08, 0x09, 0x0a, 0x0b,
+                                            0x0c, 0x0d, 0x0e, 0x0f,
+                                            0x00, 0x01, 0x02, 0x03,
+                                            0x04, 0x05, 0x06, 0x07]
 
-        rsp = await self.read(araddr=0x2000, arid=2, arlen=15, arsize=0, arburst=axi_burst_t.WRAP)
-        assert rsp.rdata == [0x08, 0x09, 0x0a, 0x0b,
-                             0x0c, 0x0d, 0x0e, 0x0f,
-                             0x00, 0x01, 0x02, 0x03,
-                             0x04, 0x05, 0x06, 0x07]
+        # Only the first beat is affected by the unaligned address.
+        rsp = await self.read(araddr=0x2800, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 
+        # Same read as above, but unaligned, expect the same data.
+        rsp = await self.read(araddr=0x2801, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        rsp = await self.read(araddr=0x2802, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        rsp = await self.read(araddr=0x2803, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [0xFFFF_FF00,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+
+        rsp = await self.read(araddr=0x2804, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
+
+        rsp = await self.read(araddr=0x2805, arid=2, arlen=15, arsize=2, arburst=axi_burst_t.INCR)
+        assert list(rsp.rdata.values()) == [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
 
 class example_env(avl.Env):
 
@@ -84,6 +102,7 @@ async def test(dut):
     avl.Factory.set_variable("*.agent.mwdrv.response_rate_limit", lambda: 0.5)
     avl.Factory.set_variable("*.agent.srdrv.control_rate_limit", lambda: 0.1)
     avl.Factory.set_variable("*.agent.mrdrv.response_rate_limit", lambda: 0.1)
+    avl.Factory.set_variable("*.agent.*.pending_rate_limit", lambda: 0.5)
 
     # Define memory range
     avl.Factory.set_variable("*.agent.cfg.subordinate_ranges", [(0x0000, 0x2FFF)])
