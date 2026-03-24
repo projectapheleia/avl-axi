@@ -8,6 +8,7 @@ import random
 import avl
 import cocotb
 from cocotb.triggers import RisingEdge
+import random
 
 from ._driver import Driver
 from ._item import SequenceItem, WriteItem
@@ -129,7 +130,7 @@ class SubordinateWriteDriver(Driver):
             # Populate Item with control data
             for s in aw_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
-            item.resize(finalize=True)
+            item.resize()
 
             self.controlQ.append(item)
 
@@ -156,7 +157,7 @@ class SubordinateWriteDriver(Driver):
                 await RisingEdge(self.i_f.aclk)
 
             # Rate Limiter
-            await self.wait_on_rate(self.control_rate_limit())
+            await self.wait_on_rate(self.data_rate_limit())
 
             self.i_f.set("wready", 1)
 
@@ -179,7 +180,8 @@ class SubordinateWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
         for s in b_s_signals:
-            self.i_f.set(s, 0)
+            if s != "bpending":
+                self.i_f.set(s, 0)
 
     async def drive_response(self) -> None:
         """
@@ -201,21 +203,68 @@ class SubordinateWriteDriver(Driver):
             # Exclusive monitor
             self.emonitor.process_write(item)
 
+            # Credit Control
+            await self.wait_on_credit("b", [0])
+
             # Rate Limiter
             await self.wait_on_rate(self.response_rate_limit())
+
+           # Pending
+            if not bool(self.i_f.get("bpending", default=1)):
+                self.i_f.set("bpending", 1)
+                await RisingEdge(self.i_f.aclk)
 
             for s in b_s_signals:
                 if s in ["bvalid"]:
                     self.i_f.set(s, 1)
+                elif s == "bpending":
+                    if random.random() > self.pending_rate_limit():
+                        self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, default=0))
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("bready"):
+                if self.i_f.get("bready", default=1):
                     break
 
             await self. quiesce_response()
+
+    async def drive_credits(self) -> None:
+        """
+        Drive credits
+        """
+
+        if self.i_f.AXI_Transport != "Credited":
+            return
+
+        while True:
+            await RisingEdge(self.i_f.aclk)
+
+            if self.i_f.get("aresetn") == 0:
+                continue
+
+            awcrdt = 0
+            awcrdtsh = 0
+            wcrdt = 0
+            wcrdtsh = 0
+            for i in range(self.i_f.Num_RP_AWW):
+                if int(self.i_f.get("awcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                    awcrdt |= 1 << i
+
+                if int(self.i_f.get("wcredits", idx=i, default=0)) < self.i_f.NUM_CREDITS and random.random() <= self.credit_rate_limit():
+                    wcrdt |= 1 << i
+
+            if bool(self.i_f.Shared_Credits_AW) and int(self.i_f.get("awcredits", idx=self.i_f.Num_RP_AWW, default=0)) < self.i_f.NUM_SHARED_CREDITS and random.random() <= self.credit_rate_limit():
+                awcrdtsh |= 1
+
+            if bool(self.i_f.Shared_Credits_W) and int(self.i_f.get("wcredits", idx=self.i_f.Num_RP_AWW, default=0)) < self.i_f.NUM_SHARED_CREDITS and random.random() <= self.credit_rate_limit():
+                wcrdtsh |= 1
+
+            self.i_f.set("awcrdt", awcrdt)
+            self.i_f.set("wcrdt", wcrdt)
+            self.i_f.set("awcrdtsh", awcrdtsh)
+            self.i_f.set("wcrdtsh", wcrdtsh)
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """

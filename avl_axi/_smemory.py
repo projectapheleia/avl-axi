@@ -42,9 +42,9 @@ class SubordinateMemory(avl.Memory):
         :rtype: int
         """
         if self._endianness_swap_:
-            return self._convert_endianness_(super().read(address, num_bytes=num_bytes), num_bytes=num_bytes)
+            return self._convert_endianness_(super().read(address, num_bytes=num_bytes, rotated=True), num_bytes=num_bytes)
         else:
-            return super().read(address, num_bytes=num_bytes)
+            return super().read(address, num_bytes=num_bytes, rotated=True)
 
     def write(self, address: int, value: int, num_bytes : int = None, strobe : int = None) -> None:
         """
@@ -64,11 +64,8 @@ class SubordinateMemory(avl.Memory):
         if self._endianness_swap_:
             value = self._convert_endianness_(value, num_bytes=num_bytes)
 
-        # Apply mask
-        value &= (1 << 8*num_bytes)-1
-
         # Write to memory
-        super().write(address, value, num_bytes=num_bytes, strobe=strobe)
+        super().write(address, value, num_bytes=num_bytes, strobe=strobe, rotated=True)
 
     def _convert_endianness_(self, value: int, num_bytes: int) -> int:
         """
@@ -334,7 +331,7 @@ class SubordinateMemory(avl.Memory):
 
                 else:
                     # Standard Write
-                    self.write(a, item.get("wdata", idx=i, default=0), num_bytes=num_bytes, strobe=item.get("wstrb", idx=i, default=None))
+                    self.write(a, item.get("wdata", idx=i, default=0), strobe=item.get("wstrb", idx=i, default=None))
             else:
                 item.set("bresp", axi_resp_t.DECERR)
 
@@ -358,7 +355,8 @@ class SubordinateMemory(avl.Memory):
 
                 if self._check_address_(a):
                     num_bytes = 1<<(item.get("arsize", default=0))
-                    item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
+                    aligned_addr = a & ~(num_bytes-1)
+                    item.set("rdata", self.read(aligned_addr, num_bytes=num_bytes), idx=i)
                     item.set("rresp", axi_resp_t.OKAY, idx=i)
                 else:
                     item.set("rdata", axi_resp_t.OKAY, idx=i)
