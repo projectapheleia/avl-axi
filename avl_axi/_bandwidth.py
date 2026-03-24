@@ -48,10 +48,10 @@ class Bandwidth(avl.Component):
                         if hasattr(self.item, "wstrb"):
                             incr += bin(self.item.wstrb[i]).count("1")
                         else:
-                            incr += 2**self.item.get("awsize", default=0)
+                            incr += 1<<self.item.get("awsize", default=0)
                 elif hasattr(self.item, "rdata"):
                     for _ in range(self.item.get_len()):
-                        incr += 2**self.item.get("arsize", default=0)
+                        incr += 1<<self.item.get("arsize", default=0)
 
                 self.bandwidth[t] += incr
 

@@ -387,7 +387,7 @@ class Coverage(avl.Component):
             for k,v in var.values().items():
                 cg._cps_[signal].add_bin(v, k)
         elif var.width <= 8:
-            for i in range(2**var.width):
+            for i in range(1<<var.width):
                 cg._cps_[signal].add_bin(f"{i}", i)
         else:
             for i in range(var.width):
