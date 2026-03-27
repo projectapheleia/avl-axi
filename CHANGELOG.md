@@ -1,5 +1,7 @@
 # Changelog
 
+## [v0.6.0] - 2026-03-27
+
 ### Fixed
  - [#24](https://github.com/projectapheleia/avl-axi/issues/24) Examples fail in VCS - Interface signal enumeration not working
  - Changed power of 2 to left shift for performance
