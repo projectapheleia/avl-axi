@@ -33,7 +33,7 @@ class ManagerWriteDriver(Driver):
         self.controlQ = []
         self.dataQ = []
         self.responseQ = {}
-        for i in range(2**self.i_f.ID_W_WIDTH):
+        for i in range(1<<self.i_f.ID_W_WIDTH):
             self.responseQ[i] = []
         self.response_pending = 0
 

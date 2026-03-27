@@ -64,7 +64,7 @@ class Driver(avl.Driver):
         # Keep track of active ids
         self._unique_ids_ = {}
         self._tag_ids_ = {}
-        for i in range(2**max(self.i_f.ID_R_WIDTH, self.i_f.ID_W_WIDTH)):
+        for i in range(1<<max(self.i_f.ID_R_WIDTH, self.i_f.ID_W_WIDTH)):
             self._unique_ids_[i] = 0
             self._tag_ids_[i] = 0
 
@@ -165,7 +165,7 @@ class Driver(avl.Driver):
             await FallingEdge(self.i_f.aresetn)
             await self.reset()
 
-            for i in range(2**max(self.i_f.ID_R_WIDTH, self.i_f.ID_W_WIDTH)):
+            for i in range(1<<max(self.i_f.ID_R_WIDTH, self.i_f.ID_W_WIDTH)):
                 self._unique_ids_[i] = 0
                 self._tag_ids_[i] = 0
 
