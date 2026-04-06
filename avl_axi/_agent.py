@@ -26,7 +26,7 @@ from ._wmonitor import WriteMonitor
 class Agent(avl.Agent):
     def __init__(self, name: str, parent: avl.Component) -> None:
         """
-        Initialize the avl-apb Agent
+        Initialize the avl-axi Agent
 
         :param name: Name of the agent instance
         :type name: str

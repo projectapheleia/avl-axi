@@ -10,7 +10,7 @@ class AgentCfg(avl.Object):
 
     def __init__(self, name: str, parent: avl.Component) -> None:
         """
-        Initialize the avl-apb Agent Configuration
+        Initialize the avl-axi Agent Configuration
 
         :param name: Name of the agent instance
         :type name: str

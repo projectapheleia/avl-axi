@@ -22,7 +22,7 @@ class ManagerWakeDriver(avl.Driver):
 
     def __init__(self, name: str, parent: avl.Component) -> None:
         """
-        Initialize the Manager Write Driver for the AMBA agent.
+        Initialize the Manager Write Driver for the AXI agent.
 
         :param name: Name of the agent instance
         :type name: str

@@ -18,7 +18,7 @@ class ManagerReadDriver(Driver):
 
     def __init__(self, name: str, parent: avl.Component) -> None:
         """
-        Initialize the Manager Read Driver for the AMBA agent.
+        Initialize the Manager Read Driver for the AXI agent.
 
         :param name: Name of the agent instance
         :type name: str
