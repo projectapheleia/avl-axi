@@ -1,5 +1,7 @@
 # Changelog
 
+## [v0.6.1] - 2026-04-09
+
 ### Fixed
  - [#25](https://github.com/projectapheleia/avl-axi/issues/25) Most examples fail in VCS due to failure to cast X to bool
 
