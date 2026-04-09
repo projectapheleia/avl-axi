@@ -99,12 +99,12 @@ class WriteMonitor(avl.Monitor):
 
             cnt = None
             while True:
-                if self.i_f.get("awvalid", default=0) and self.i_f.get("awakeup", default=1):
+                if self.i_f.get("awvalid", default=0) == 1 and self.i_f.get("awakeup", default=1) == 1:
                     if cnt is None:
                         cnt = 0
                     else:
                         cnt += 1
-                    if self.i_f.get("awready", default=1):
+                    if self.i_f.get("awready", default=1) == 1:
                         break
                 await RisingEdge(self.i_f.aclk)
 
@@ -128,12 +128,12 @@ class WriteMonitor(avl.Monitor):
         self.dataQ.clear()
         cnt = None
         while True:
-            if self.i_f.get("wvalid", default=0) and self.i_f.get("awakeup", default=1):
+            if self.i_f.get("wvalid", default=0) == 1 and self.i_f.get("awakeup", default=1) == 1:
                 if cnt is None:
                     cnt = 0
                 else:
                     cnt += 1
-                if self.i_f.get("wready", default=1):
+                if self.i_f.get("wready", default=1) == 1:
                     data = {}
                     for s in w_m_signals:
                         data[s] = self.i_f.get(s, default=0)
@@ -156,12 +156,12 @@ class WriteMonitor(avl.Monitor):
 
             while True:
                 cnt = None
-                if self.i_f.get("bvalid", default=0) and self.i_f.get("bid", default=0) == id:
+                if self.i_f.get("bvalid", default=0) == 1 and self.i_f.get("bid", default=0) == id:
                     if cnt is None:
                         cnt = 0
                     else:
                         cnt += 1
-                    if self.i_f.get("bready", default=1):
+                    if self.i_f.get("bready", default=1) == 1:
                         break
                 await RisingEdge(self.i_f.aclk)
 
@@ -199,6 +199,13 @@ class WriteMonitor(avl.Monitor):
         self.reset()
 
         while True:
+
+            # Wait until the we aren't in reset
+            while True:
+                await RisingEdge(self.i_f.aclk)
+                aresetn = self.i_f.get("aresetn", default=0)
+                if aresetn.is_resolvable and aresetn == 1:
+                    break
 
             tasks = []
             tasks.append(cocotb.start_soon(self._wait_for_data_()))
