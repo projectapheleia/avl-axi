@@ -65,12 +65,12 @@ class ReadMonitor(avl.Monitor):
 
             cnt = None
             while True:
-                if self.i_f.get("arvalid", default=0) and self.i_f.get("awakeup", default=1):
+                if self.i_f.get("arvalid", default=0) == 1 and self.i_f.get("awakeup", default=1) == 1:
                     if cnt is None:
                         cnt = 0
                     else:
                         cnt += 1
-                    if self.i_f.get("arready", default=1):
+                    if self.i_f.get("arready", default=1) == 1:
                         break
                 await RisingEdge(self.i_f.aclk)
 
@@ -93,12 +93,12 @@ class ReadMonitor(avl.Monitor):
             for i in range(item.get_len()+1):
                 cnt = None
                 while True:
-                    if self.i_f.get("rvalid", default=0) and self.i_f.get("rid", default=0) == id and self.i_f.get("awakeup", default=1):
+                    if self.i_f.get("rvalid", default=0) == 1 and self.i_f.get("rid", default=0) == id and self.i_f.get("awakeup", default=1) == 1:
                         if cnt is None:
                             cnt = 0
                         else:
                             cnt += 1
-                        if self.i_f.get("rready", default=1):
+                        if self.i_f.get("rready", default=1) == 1:
                             break
                     await RisingEdge(self.i_f.aclk)
 
@@ -149,6 +149,13 @@ class ReadMonitor(avl.Monitor):
         self.reset()
 
         while True:
+
+            # Wait until the we aren't in reset
+            while True:
+                await RisingEdge(self.i_f.aclk)
+                aresetn = self.i_f.get("aresetn", default=0)
+                if aresetn.is_resolvable and aresetn == 1:
+                    break
 
             tasks = []
             tasks.append(cocotb.start_soon(self.monitor_control()))
