@@ -486,7 +486,7 @@ class WriteItem(SequenceItem):
         # Post process wstrbs to be legal
         # Difficult to constrain so patch
         if hasattr(self, "wstrb"):
-            addresses = get_burst_addresses(self.awaddr,
+            addresses = get_burst_addresses(self.get("awaddr", default=0),
                                             self.get("awlen", default=0),
                                             self.get("awsize", default=0),
                                             self.get("awburst", default=axi_burst_t.INCR))
