@@ -90,7 +90,7 @@ class ReadMonitor(avl.Monitor):
         while True:
             item = await self.responseQ[id].blocking_pop()
 
-            for i in range(item.get_len()+1):
+            for i in range(item.get_rlen()+1):
                 cnt = None
                 while True:
                     if self.i_f.get("rvalid", default=0) == 1 and self.i_f.get("rid", default=0) == id and self.i_f.get("awakeup", default=1) == 1:
@@ -115,7 +115,7 @@ class ReadMonitor(avl.Monitor):
                             _and_ &= item.get(s, idx=i)
 
 
-                if i == item.get_len():
+                if i == item.get_rlen():
                     # Sanity Checks
                     item.sanity()
 

@@ -130,9 +130,9 @@ class SubordinateMemory(avl.Memory):
         :rtype: int
         """
 
-        old_value = self.read(address, num_bytes=num_bytes//2)
+        old_value = self.read(address, num_bytes=num_bytes)
         if old_value == compare:
-            self.write(address, value, num_bytes=num_bytes//2)
+            self.write(address, value, num_bytes=num_bytes)
 
     def add(self, address: int, value: int, num_bytes : int = None) -> int:
         """
@@ -279,8 +279,16 @@ class SubordinateMemory(avl.Memory):
                 wdata = item.get("wdata", idx=i, default=0)
 
                 if hasattr(item, "awatop"):
-                    # Return value is always original read
-                    item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
+                    # For COMPARE: only the first half of W beats (compare beats) map to R-channel slots.
+                    # Swap beats (second half) do not produce R beats.
+                    _is_compare_rbeat_ = True
+                    if item.awatop in [axi_atomic_t.COMPARE]:
+                        _n_compare_ = (item.get("awlen", default=0) + 1) // 2
+                        _is_compare_rbeat_ = (i < _n_compare_)
+
+                    # Return value is always original read (only for R-beat slots)
+                    if _is_compare_rbeat_:
+                        item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
 
                     # Handle endianness
                     if item.awatop.endianness() != self.endianness:
@@ -318,11 +326,12 @@ class SubordinateMemory(avl.Memory):
                         self.swap(a, wdata, num_bytes=num_bytes)
 
                     elif item.awatop in [axi_atomic_t.COMPARE]:
-                        comp  = wdata
-                        comp &= (1 << 8*num_bytes//2)-1
-                        swap  = wdata >> (8*num_bytes//2)
-                        swap &= (1 << 8*num_bytes//2)-1
-                        self.compare(a, swap, comp, num_bytes=num_bytes)
+                        # COMPARE: first half of beats = compare data, second half = swap data.
+                        # Each beat maps 1:1 to a memory word (awsize bytes).
+                        if _is_compare_rbeat_:
+                            swap_data = item.get("wdata", idx=i + _n_compare_, default=0)
+                            self.compare(a, swap_data, wdata, num_bytes=num_bytes)
+                        # else: swap beats are processed when pairing above; skip here
                     else:
                         raise ValueError()
 

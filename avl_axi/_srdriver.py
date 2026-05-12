@@ -164,7 +164,7 @@ class SubordinateReadDriver(Driver):
                 if s == "rvalid":
                     self.i_f.set(s, 1)
                 elif s == "rlast":
-                    self.i_f.set(s, item._rcnt_ == item.get_len())
+                    self.i_f.set(s, item._rcnt_ == item.get_rlen())
                 elif s == "rpending":
                     if random.random() > self.pending_rate_limit():
                         self.i_f.set(s, 0)
@@ -180,7 +180,7 @@ class SubordinateReadDriver(Driver):
             self.emonitor.process_read(item)
 
             item._rcnt_ += 1
-            if item._rcnt_ == item.get_len()+1:
+            if item._rcnt_ == item.get_rlen()+1:
                 delattr(item, "_rcnt_")
                 self.responseQ.pop(idx)
 

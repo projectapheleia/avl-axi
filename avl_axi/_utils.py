@@ -53,6 +53,32 @@ def get_burst_addresses(base, length, size, burst):
 
     return addresses
 
+def get_beat_byte_offset(base, beat, length, size, burst, strb_width):
+    """
+    Byte-lane offset of a single beat within the data channel for an AXI burst.
+
+    Implements the narrow-transfer placement defined by AMBA AXI A3.2.3 and the
+    address structure in A3.4.1: each beat's `1 << size` payload bytes live on
+    byte lanes `[offset .. offset + (1 << size) - 1]` of the data bus, where
+    `offset = beat_address mod data_bus_bytes`. For INCR the first beat may be
+    unaligned; subsequent beats are aligned to `1 << size`. For WRAP the address
+    wraps at `(1 << size) * (length + 1)`. For FIXED every beat reuses the
+    Start_Address lanes.
+
+    Args:
+        base (int):       Start_Address (AWADDR/ARADDR).
+        beat (int):       0-indexed beat number within the burst.
+        length (int):     AWLEN/ARLEN (number of beats - 1).
+        size (int):       AWSIZE/ARSIZE (log2 of bytes per beat).
+        burst (int):      0=FIXED, 1=INCR, 2=WRAP.
+        strb_width (int): Data-bus width in bytes.
+
+    Returns:
+        int: Byte-lane offset for `beat` within the data bus.
+    """
+    return get_burst_addresses(base, length, size, burst)[beat] & (strb_width - 1)
+
+
 def get_burst_byte_count(strb, length, size, burst):
     """
     Calculate total bytes transferred for an AXI burst.
@@ -81,4 +107,4 @@ def get_burst_byte_count(strb, length, size, burst):
 
     return total_bytes
 
-__all__ = ["get_burst_addresses", "get_burst_byte_count"]
+__all__ = ["get_burst_addresses", "get_beat_byte_offset", "get_burst_byte_count"]

@@ -12,6 +12,7 @@ import random
 from ._driver import Driver
 from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
 from ._types import axi_atomic_t
+from ._utils import get_beat_byte_offset
 
 class ManagerWriteDriver(Driver):
 
@@ -190,6 +191,17 @@ class ManagerWriteDriver(Driver):
                     self.i_f.set("wpending", 1)
                     await RisingEdge(self.i_f.aclk)
 
+                # Narrow-transfer byte-lane placement (AXI A3.2.3 / A3.4.1):
+                # position this beat's wdata/wstrb at byte lanes
+                # [byte_offset .. byte_offset + (1<<awsize) - 1] of the data bus.
+                awaddr  = int(item.get("awaddr",  default=0))
+                awsize  = int(item.get("awsize",  default=0))
+                awburst = int(item.get("awburst", default=1))
+                awlen   = int(item.get("awlen",   default=0))
+                byte_offset = get_beat_byte_offset(
+                    awaddr, i, awlen, awsize, awburst, self.i_f.STRB_WIDTH
+                )
+
                 for s in w_m_signals:
                     if s == "wvalid":
                         self.i_f.set(s, 1)
@@ -200,6 +212,10 @@ class ManagerWriteDriver(Driver):
                     elif s == "wpending":
                         if random.random() > self.pending_rate_limit():
                             self.i_f.set(s, 0)
+                    elif s == "wdata":
+                        self.i_f.set(s, int(item.get(s, idx=i, default=0)) << (byte_offset * 8))
+                    elif s == "wstrb":
+                        self.i_f.set(s, int(item.get(s, idx=i, default=0)) << byte_offset)
                     else:
                         self.i_f.set(s, item.get(s, idx=i, default=0))
 
