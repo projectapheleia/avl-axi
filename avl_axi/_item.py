@@ -514,7 +514,7 @@ class WriteItem(SequenceItem):
 
             wstrb_mask = (1 << (1 << self.get("awsize", default=0))) - 1
             for i,a in enumerate(addresses):
-                offset = a & (self._i_f_.DATA_WIDTH//8)-1
+                offset = int(a) & ((self._i_f_.DATA_WIDTH//8) - 1)
                 self.wstrb[i] &= (wstrb_mask << offset)
 
 class ReadItem(SequenceItem):

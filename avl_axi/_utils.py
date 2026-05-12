@@ -76,7 +76,7 @@ def get_beat_byte_offset(base, beat, length, size, burst, strb_width):
     Returns:
         int: Byte-lane offset for `beat` within the data bus.
     """
-    return get_burst_addresses(base, length, size, burst)[beat] & (strb_width - 1)
+    return int(get_burst_addresses(base, length, size, burst)[beat]) & (strb_width - 1)
 
 
 def get_burst_byte_count(strb, length, size, burst):
