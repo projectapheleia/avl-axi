@@ -279,11 +279,13 @@ class SubordinateMemory(avl.Memory):
                 wdata = item.get("wdata", idx=i, default=0)
 
                 if hasattr(item, "awatop"):
-                    # For COMPARE: only the first half of W beats (compare beats) map to R-channel slots.
-                    # Swap beats (second half) do not produce R beats.
+                    # For COMPARE: compare beats map 1:1 to R-channel slots; swap beats do not.
+                    # Use item.get_rlen()+1 so this covers both the unpacked form (AWLEN>=1,
+                    # half the W beats are compare beats) and the packed form per
+                    # AXI A6.2 (AWLEN=0, single beat carrying both compare and swap).
                     _is_compare_rbeat_ = True
                     if item.awatop in [axi_atomic_t.COMPARE]:
-                        _n_compare_ = (item.get("awlen", default=0) + 1) // 2
+                        _n_compare_ = item.get_rlen() + 1
                         _is_compare_rbeat_ = (i < _n_compare_)
 
                     # Return value is always original read (only for R-beat slots)
@@ -326,12 +328,23 @@ class SubordinateMemory(avl.Memory):
                         self.swap(a, wdata, num_bytes=num_bytes)
 
                     elif item.awatop in [axi_atomic_t.COMPARE]:
-                        # COMPARE: first half of beats = compare data, second half = swap data.
-                        # Each beat maps 1:1 to a memory word (awsize bytes).
-                        if _is_compare_rbeat_:
+                        # Two supported forms per AXI A6.2 (INCR variants only here):
+                        #   - Packed (AWLEN=0): single beat holds compare in the lower
+                        #     half-size bytes and swap in the upper half-size bytes;
+                        #     the compare/swap target is half the AXI size.
+                        #   - Unpacked (AWLEN>=1): first _n_compare_ beats carry the
+                        #     compare data, paired beat-for-beat with the swap data in
+                        #     the second half. Each pair maps to a memory word of awsize bytes.
+                        if item.get("awlen", default=0) == 0:
+                            half_bytes  = num_bytes // 2
+                            half_mask   = (1 << (half_bytes * 8)) - 1
+                            compare_val = wdata & half_mask
+                            swap_val    = (wdata >> (half_bytes * 8)) & half_mask
+                            self.compare(a, swap_val, compare_val, num_bytes=half_bytes)
+                        elif _is_compare_rbeat_:
                             swap_data = item.get("wdata", idx=i + _n_compare_, default=0)
                             self.compare(a, swap_data, wdata, num_bytes=num_bytes)
-                        # else: swap beats are processed when pairing above; skip here
+                        # else: swap beats of the unpacked form are handled by the paired compare beat
                     else:
                         raise ValueError()
 
