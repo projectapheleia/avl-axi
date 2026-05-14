@@ -46,6 +46,22 @@ class SubordinateMemory(avl.Memory):
         else:
             return super().read(address, num_bytes=num_bytes, rotated=True)
 
+    def _mask_by_strobe(self, data: int, strobe, n_bytes: int) -> int:
+        """Byte-wise apply WSTRB to WDATA: each cleared strobe bit zeroes the
+        corresponding data byte. Mirrors what a spec-compliant subordinate sees
+        on the wire: bytes with WSTRB=0 are not part of the write. With strobe
+        all-zero the returned value is 0.
+        """
+        if strobe is None:
+            return int(data)
+        s = int(strobe)
+        d = int(data)
+        mask = 0
+        for j in range(int(n_bytes)):
+            if (s >> j) & 1:
+                mask |= 0xFF << (8 * j)
+        return d & mask
+
     def write(self, address: int, value: int, num_bytes : int = None, strobe : int = None) -> None:
         """
         Write a value to the memory at the specified address.
@@ -277,6 +293,17 @@ class SubordinateMemory(avl.Memory):
             if self._check_address_(a):
                 num_bytes = 1<<(item.get("awsize", default=0))
                 wdata = item.get("wdata", idx=i, default=0)
+                wstrb = item.get("wstrb", idx=i, default=None)
+
+                # Honor WSTRB on the operand uniformly across all writes (atomic
+                # and non-atomic): bytes with WSTRB=0 are not part of the operand
+                # and are zeroed before the operation runs. For spec-compliant
+                # atomics A6.4.5 requires all strobes within the data window to
+                # be asserted, so this mask is a no-op for them; it still
+                # protects the operand against any unstrobed garbage outside the
+                # data window. For non-atomic writes the strobe is also applied
+                # at commit time via self.write(strobe=...) for partial writes.
+                wdata = self._mask_by_strobe(wdata, wstrb, self.nbytes)
 
                 if hasattr(item, "awatop"):
                     # For COMPARE: compare beats map 1:1 to R-channel slots; swap beats do not.
@@ -342,7 +369,10 @@ class SubordinateMemory(avl.Memory):
                             swap_val    = (wdata >> (half_bytes * 8)) & half_mask
                             self.compare(a, swap_val, compare_val, num_bytes=half_bytes)
                         elif _is_compare_rbeat_:
-                            swap_data = item.get("wdata", idx=i + _n_compare_, default=0)
+                            swap_idx  = i + _n_compare_
+                            swap_data = item.get("wdata", idx=swap_idx, default=0)
+                            swap_strb = item.get("wstrb", idx=swap_idx, default=None)
+                            swap_data = self._mask_by_strobe(swap_data, swap_strb, self.nbytes)
                             self.compare(a, swap_data, wdata, num_bytes=num_bytes)
                         # else: swap beats of the unpacked form are handled by the paired compare beat
                     else:

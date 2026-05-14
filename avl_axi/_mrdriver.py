@@ -193,7 +193,6 @@ class ManagerReadDriver(Driver):
             # beat lives on byte lanes [byte_offset .. byte_offset + (1<<size) - 1]
             # of the data bus and is de-shifted into a logical value. When disabled,
             # rdata is captured verbatim from the bus (legacy behaviour).
-            # For ATOP WriteItems the address/control fields are aw*; for ReadItems ar*.
             if self.narrow_transfer_lane_steering:
                 if hasattr(item, "awaddr"):
                     addr_key, size_key, burst_key = "awaddr", "awsize", "awburst"
