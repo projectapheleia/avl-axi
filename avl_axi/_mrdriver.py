@@ -12,6 +12,7 @@ import random
 from ._driver import Driver
 from ._signals import ar_m_signals, r_m_signals, r_s_signals
 from ._types import axi_atomic_t
+from ._utils import get_beat_byte_offset
 
 
 class ManagerReadDriver(Driver):
@@ -37,6 +38,10 @@ class ManagerReadDriver(Driver):
         for i in range(1<<self.i_f.ID_R_WIDTH):
             self.responseQ[i] = []
         self.response_pending = 0
+
+        # AXI A3.2.3 / A3.4.1 narrow-transfer byte-lane de-shift opt-in (via AgentCfg).
+        _cfg_ = avl.Factory.get_variable(f"{self.get_full_name()}.cfg", None)
+        self.narrow_transfer_lane_steering = bool(_cfg_.narrow_transfer_lane_steering) if _cfg_ is not None else False
 
     async def reset(self) -> None:
         """
@@ -183,11 +188,37 @@ class ManagerReadDriver(Driver):
             if not hasattr(item, "_rcnt_"):
                 item._rcnt_ = 0
 
+            # Narrow-transfer byte-lane sampling (AXI A3.2.3 / A3.4.1) is opt-in
+            # via cfg.narrow_transfer_lane_steering: when enabled, rdata for this
+            # beat lives on byte lanes [byte_offset .. byte_offset + (1<<size) - 1]
+            # of the data bus and is de-shifted into a logical value. When disabled,
+            # rdata is captured verbatim from the bus (legacy behaviour).
+            if self.narrow_transfer_lane_steering:
+                if hasattr(item, "awaddr"):
+                    addr_key, size_key, burst_key = "awaddr", "awsize", "awburst"
+                else:
+                    addr_key, size_key, burst_key = "araddr", "arsize", "arburst"
+                base_addr = int(item.get(addr_key,  default=0))
+                asize     = int(item.get(size_key,  default=0))
+                aburst    = int(item.get(burst_key, default=1))
+                rlen      = item.get_rlen()
+                byte_offset = get_beat_byte_offset(
+                    base_addr, item._rcnt_, rlen, asize, aburst, self.i_f.STRB_WIDTH
+                )
+                num_bytes = 1 << asize
+                data_mask = (1 << (num_bytes * 8)) - 1
+            else:
+                byte_offset = 0
+
             for s in r_s_signals:
-                item.set(s, self.i_f.get(s, default=0), idx=item._rcnt_)
+                if s == "rdata" and byte_offset:
+                    raw = int(self.i_f.get(s, default=0))
+                    item.set(s, (raw >> (byte_offset * 8)) & data_mask, idx=item._rcnt_)
+                else:
+                    item.set(s, self.i_f.get(s, default=0), idx=item._rcnt_)
 
             item._rcnt_ += 1
-            if item._rcnt_ == item.get_len()+1:
+            if item._rcnt_ == item.get_rlen()+1:
                 # Inform sequence response phase is complete
                 delattr(item, "_rcnt_")
                 self.response_pending -= 1

@@ -12,6 +12,7 @@ import random
 from ._driver import Driver
 from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
 from ._types import axi_atomic_t
+from ._utils import get_beat_byte_offset
 
 class ManagerWriteDriver(Driver):
 
@@ -43,6 +44,10 @@ class ManagerWriteDriver(Driver):
 
         if self.allow_early_data and self.max_outstanding is not None:
             raise ValueError("allow_early_data and max_outstanding are mutually exclusive")
+
+        # AXI A3.2.3 / A3.4.1 narrow-transfer byte-lane placement opt-in (via AgentCfg).
+        _cfg_ = avl.Factory.get_variable(f"{self.get_full_name()}.cfg", None)
+        self.narrow_transfer_lane_steering = bool(_cfg_.narrow_transfer_lane_steering) if _cfg_ is not None else False
 
     async def reset(self) -> None:
         """
@@ -190,6 +195,22 @@ class ManagerWriteDriver(Driver):
                     self.i_f.set("wpending", 1)
                     await RisingEdge(self.i_f.aclk)
 
+                # Narrow-transfer byte-lane placement (AXI A3.2.3 / A3.4.1) is opt-in
+                # via cfg.narrow_transfer_lane_steering: when enabled, position this
+                # beat's wdata/wstrb at byte lanes [byte_offset .. byte_offset +
+                # (1<<awsize) - 1] of the data bus. When disabled, drive the values
+                # verbatim (legacy behaviour, byte_offset effectively 0).
+                if self.narrow_transfer_lane_steering:
+                    awaddr  = int(item.get("awaddr",  default=0))
+                    awsize  = int(item.get("awsize",  default=0))
+                    awburst = int(item.get("awburst", default=1))
+                    awlen   = int(item.get("awlen",   default=0))
+                    byte_offset = get_beat_byte_offset(
+                        awaddr, i, awlen, awsize, awburst, self.i_f.STRB_WIDTH
+                    )
+                else:
+                    byte_offset = 0
+
                 for s in w_m_signals:
                     if s == "wvalid":
                         self.i_f.set(s, 1)
@@ -200,6 +221,10 @@ class ManagerWriteDriver(Driver):
                     elif s == "wpending":
                         if random.random() > self.pending_rate_limit():
                             self.i_f.set(s, 0)
+                    elif s == "wdata" and byte_offset:
+                        self.i_f.set(s, int(item.get(s, idx=i, default=0)) << (byte_offset * 8))
+                    elif s == "wstrb" and byte_offset:
+                        self.i_f.set(s, int(item.get(s, idx=i, default=0)) << byte_offset)
                     else:
                         self.i_f.set(s, item.get(s, idx=i, default=0))
 

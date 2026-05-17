@@ -13,6 +13,7 @@ import random
 from ._driver import Driver
 from ._item import SequenceItem, WriteItem
 from ._signals import aw_m_signals, aw_s_signals, b_s_signals, w_m_signals, w_s_signals
+from ._utils import get_beat_byte_offset
 
 
 class SubordinateWriteDriver(Driver):
@@ -48,6 +49,14 @@ class SubordinateWriteDriver(Driver):
         # Exclusive Monitor
         self.emonitor = None
 
+        # AXI A3.2.3 / A3.4.1 narrow-transfer byte-lane de-shift opt-in (via AgentCfg).
+        # Symmetric with ManagerWriteDriver: when enabled, the wdata/wstrb captured
+        # from the bus on each W beat is un-rotated by the per-beat byte offset so
+        # downstream consumers (e.g. SubordinateMemory) always see the operand at
+        # lane 0. When disabled the bus word is stored verbatim (legacy behaviour).
+        _cfg_ = avl.Factory.get_variable(f"{self.get_full_name()}.cfg", None)
+        self.narrow_transfer_lane_steering = bool(_cfg_.narrow_transfer_lane_steering) if _cfg_ is not None else False
+
     async def reset(self) -> None:
         """
         Reset the driver by setting all signals to their default values.
@@ -72,11 +81,32 @@ class SubordinateWriteDriver(Driver):
         while True:
             item = await self.controlQ.blocking_pop()
 
+            # AXI A3.2.3 / A3.4.1 narrow-transfer byte-lane de-shift opt-in:
+            # if enabled, compute the per-beat byte offset from the AW address
+            # and un-rotate wdata/wstrb so the operand always lands at lane 0
+            # in the item. Otherwise store the bus word verbatim (legacy).
+            if self.narrow_transfer_lane_steering:
+                awaddr  = int(item.get("awaddr",  default=0))
+                awsize  = int(item.get("awsize",  default=0))
+                awburst = int(item.get("awburst", default=1))
+                awlen   = int(item.get("awlen",   default=0))
+
             for i in range(item.get_len()+1):
                 d = await self.dataQ.blocking_pop()
 
+                if self.narrow_transfer_lane_steering:
+                    byte_offset = get_beat_byte_offset(
+                        awaddr, i, awlen, awsize, awburst, self.i_f.STRB_WIDTH
+                    )
+                else:
+                    byte_offset = 0
+
                 for k,v in d.items():
                     if hasattr(item, k):
+                        if byte_offset and k == "wdata":
+                            v = int(v) >> (byte_offset * 8)
+                        elif byte_offset and k == "wstrb":
+                            v = int(v) >> byte_offset
                         item.set(k, v, idx=i)
 
             # Handle Memory Access

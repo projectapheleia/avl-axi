@@ -34,4 +34,11 @@ class AgentCfg(avl.Object):
         """Has Trace Generator"""
         self.subordinate_ranges = avl.Factory.get_variable(f"{self.get_full_name()}.subordinate_ranges", None)
         """Subordinate memory ranges"""
+        self.narrow_transfer_lane_steering = avl.Factory.get_variable(f"{self.get_full_name()}.narrow_transfer_lane_steering", False)
+        """When True, drivers place wdata/wstrb (and de-shift rdata) on the byte
+        lanes mandated by AXI A3.2.3 / A3.4.1 for narrow transfers (transfers
+        where 1<<awsize is smaller than the data bus). Enable when the agent's
+        bus is wider than the awsize/arsize of the transactions being driven
+        and the DUT depends on spec-compliant byte-lane placement (e.g. a
+        downsizer). Leave False otherwise to preserve legacy behaviour."""
 __all__ = ["AgentCfg"]

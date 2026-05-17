@@ -46,6 +46,22 @@ class SubordinateMemory(avl.Memory):
         else:
             return super().read(address, num_bytes=num_bytes, rotated=True)
 
+    def _mask_by_strobe(self, data: int, strobe, n_bytes: int) -> int:
+        """Byte-wise apply WSTRB to WDATA: each cleared strobe bit zeroes the
+        corresponding data byte. Mirrors what a spec-compliant subordinate sees
+        on the wire: bytes with WSTRB=0 are not part of the write. With strobe
+        all-zero the returned value is 0.
+        """
+        if strobe is None:
+            return int(data)
+        s = int(strobe)
+        d = int(data)
+        mask = 0
+        for j in range(int(n_bytes)):
+            if (s >> j) & 1:
+                mask |= 0xFF << (8 * j)
+        return d & mask
+
     def write(self, address: int, value: int, num_bytes : int = None, strobe : int = None) -> None:
         """
         Write a value to the memory at the specified address.
@@ -130,9 +146,9 @@ class SubordinateMemory(avl.Memory):
         :rtype: int
         """
 
-        old_value = self.read(address, num_bytes=num_bytes//2)
+        old_value = self.read(address, num_bytes=num_bytes)
         if old_value == compare:
-            self.write(address, value, num_bytes=num_bytes//2)
+            self.write(address, value, num_bytes=num_bytes)
 
     def add(self, address: int, value: int, num_bytes : int = None) -> int:
         """
@@ -277,10 +293,31 @@ class SubordinateMemory(avl.Memory):
             if self._check_address_(a):
                 num_bytes = 1<<(item.get("awsize", default=0))
                 wdata = item.get("wdata", idx=i, default=0)
+                wstrb = item.get("wstrb", idx=i, default=None)
+
+                # Honor WSTRB on the operand uniformly across all writes (atomic
+                # and non-atomic): bytes with WSTRB=0 are not part of the operand
+                # and are zeroed before the operation runs. For spec-compliant
+                # atomics A6.4.5 requires all strobes within the data window to
+                # be asserted, so this mask is a no-op for them; it still
+                # protects the operand against any unstrobed garbage outside the
+                # data window. For non-atomic writes the strobe is also applied
+                # at commit time via self.write(strobe=...) for partial writes.
+                wdata = self._mask_by_strobe(wdata, wstrb, self.nbytes)
 
                 if hasattr(item, "awatop"):
-                    # Return value is always original read
-                    item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
+                    # For COMPARE: compare beats map 1:1 to R-channel slots; swap beats do not.
+                    # Use item.get_rlen()+1 so this covers both the unpacked form (AWLEN>=1,
+                    # half the W beats are compare beats) and the packed form per
+                    # AXI A6.2 (AWLEN=0, single beat carrying both compare and swap).
+                    _is_compare_rbeat_ = True
+                    if item.awatop in [axi_atomic_t.COMPARE]:
+                        _n_compare_ = item.get_rlen() + 1
+                        _is_compare_rbeat_ = (i < _n_compare_)
+
+                    # Return value is always original read (only for R-beat slots)
+                    if _is_compare_rbeat_:
+                        item.set("rdata", self.read(a, num_bytes=num_bytes), idx=i)
 
                     # Handle endianness
                     if item.awatop.endianness() != self.endianness:
@@ -318,11 +355,26 @@ class SubordinateMemory(avl.Memory):
                         self.swap(a, wdata, num_bytes=num_bytes)
 
                     elif item.awatop in [axi_atomic_t.COMPARE]:
-                        comp  = wdata
-                        comp &= (1 << 8*num_bytes//2)-1
-                        swap  = wdata >> (8*num_bytes//2)
-                        swap &= (1 << 8*num_bytes//2)-1
-                        self.compare(a, swap, comp, num_bytes=num_bytes)
+                        # Two supported forms per AXI A6.2 (INCR variants only here):
+                        #   - Packed (AWLEN=0): single beat holds compare in the lower
+                        #     half-size bytes and swap in the upper half-size bytes;
+                        #     the compare/swap target is half the AXI size.
+                        #   - Unpacked (AWLEN>=1): first _n_compare_ beats carry the
+                        #     compare data, paired beat-for-beat with the swap data in
+                        #     the second half. Each pair maps to a memory word of awsize bytes.
+                        if item.get("awlen", default=0) == 0:
+                            half_bytes  = num_bytes // 2
+                            half_mask   = (1 << (half_bytes * 8)) - 1
+                            compare_val = wdata & half_mask
+                            swap_val    = (wdata >> (half_bytes * 8)) & half_mask
+                            self.compare(a, swap_val, compare_val, num_bytes=half_bytes)
+                        elif _is_compare_rbeat_:
+                            swap_idx  = i + _n_compare_
+                            swap_data = item.get("wdata", idx=swap_idx, default=0)
+                            swap_strb = item.get("wstrb", idx=swap_idx, default=None)
+                            swap_data = self._mask_by_strobe(swap_data, swap_strb, self.nbytes)
+                            self.compare(a, swap_data, wdata, num_bytes=num_bytes)
+                        # else: swap beats of the unpacked form are handled by the paired compare beat
                     else:
                         raise ValueError()
 
