@@ -26,14 +26,14 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaaa }
 
         # Test : Atomic load add
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_ADD, wdata=[1])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_ADD, wdata=[1], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaaa }
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaab }
 
         # Test : Atomic store add
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.STORE_LE_ADD, wdata=[2])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.STORE_LE_ADD, wdata=[2], wstrb=[0xFF])
         assert rsp.bresp == 0
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
@@ -41,7 +41,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic clr
         await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xffffffffffff], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_CLR, wdata=[0xffff00000000ffff])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_CLR, wdata=[0xffff00000000ffff], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xffffffffffff }
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
@@ -49,7 +49,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic Exclusive OR
         await self.write(awaddr=0x1000, awid=2, awsize=3, wdata=[0xaaaaaaaaaaaaaaaa], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=2, awsize=3, awatop=axi_atomic_t.LOAD_LE_EOR, wdata=[0x5555555555555555])
+        rsp = await self.write(awaddr=0x1000, awid=2, awsize=3, awatop=axi_atomic_t.LOAD_LE_EOR, wdata=[0x5555555555555555], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xaaaaaaaaaaaaaaaa }
 
         rsp = await self.read(araddr=0x1000, arid=0, arsize=3)
@@ -57,7 +57,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic Set
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0x1234567800000000], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=3, awsize=3, awatop=axi_atomic_t.LOAD_LE_SET, wdata=[0xf000000055555555])
+        rsp = await self.write(awaddr=0x1000, awid=3, awsize=3, awatop=axi_atomic_t.LOAD_LE_SET, wdata=[0xf000000055555555], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x1234567800000000 }
 
         rsp = await self.read(araddr=0x1000, arid=1, arsize=3)
@@ -65,7 +65,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic SMAX
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[10], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_SMAX, wdata=[100])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_SMAX, wdata=[100], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 10 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -73,7 +73,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic SMIN
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[20], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_SMIN, wdata=[-100])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_SMIN, wdata=[-100], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 20 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -81,7 +81,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic UMAX
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0x12345], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_UMAX, wdata=[0xfffff])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_UMAX, wdata=[0xfffff], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x12345 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -89,7 +89,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic UMIN
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0xfff], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_UMIN, wdata=[0x23])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_LE_UMIN, wdata=[0x23], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xfff }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -97,7 +97,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic SWAP
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.SWAP, wdata=[0xcafebabe])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.SWAP, wdata=[0xcafebabe], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xdeadbeef }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -105,7 +105,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Atomic COMPARE
         await self.write(awaddr=0x1000, awid=3, awsize=3, wdata=[0xcafebabedeadbeef], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.COMPARE, wdata=[0xb00bf00ddeadbeef])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.COMPARE, wdata=[0xb00bf00ddeadbeef], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0xcafebabedeadbeef }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -113,7 +113,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : Endianness - ADD
         await self.write(awaddr=0x1000, awid=0, awsize=3, wdata=[0x0001020304050607], wstrb=[0xFF])
-        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_BE_ADD, wdata=[0x01])
+        rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awatop=axi_atomic_t.LOAD_BE_ADD, wdata=[0x01], wstrb=[0xFF])
         assert rsp.rresp == { 0 : axi_resp_t.OKAY } and rsp.rdata == { 0 : 0x0001020304050607 }
 
         rsp = await self.read(araddr=0x1000, arid=4, arsize=3)
@@ -121,7 +121,7 @@ class DirectedSequence(avl_axi.ManagerSequence):
 
         # Test : BURST
         await self.write(awaddr=0x1000, awid=2, awsize=3, awlen=7, awburst=1, wdata=[0xaa00]*8, wstrb=[0xFF]*8)
-        rsp = await self.write(awaddr=0x1000, awid=3, awsize=3, awlen=7, awburst=1, awatop=axi_atomic_t.LOAD_LE_SET, wdata=[0x01,0x2,0x3,0x4,0x5,0x6,0x7,0x8])
+        rsp = await self.write(awaddr=0x1000, awid=3, awsize=3, awlen=7, awburst=1, awatop=axi_atomic_t.LOAD_LE_SET, wdata=[0x01,0x2,0x3,0x4,0x5,0x6,0x7,0x8], wstrb=[0xFF]*8)
         for i in range(8):
             assert rsp.rresp[i] == axi_resp_t.OKAY and rsp.rdata[i] == 0xaa00
 

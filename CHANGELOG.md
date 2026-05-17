@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.6.2] - 2026-05-17
+
+### Fixed
+ - [#30](https://github.com/projectapheleia/avl-axi/issues/30) ATOMIC COMPARE: R channel length should be halved AXI A6.2
+ - [#31](https://github.com/projectapheleia/avl-axi/issues/31) Support narrow-transfer lane steering AXI A3.2.3 and AXI A3.4.1
+
 ## [v0.6.1] - 2026-04-09
 
 ### Fixed
