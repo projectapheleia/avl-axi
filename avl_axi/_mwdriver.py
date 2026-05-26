@@ -176,7 +176,11 @@ class ManagerWriteDriver(Driver):
             item = self.dataQ.pop(0)
 
             # Wake
-            await item.wait_on_event("awake")
+            if not self.allow_early_data:
+                await item.wait_on_event("awake")
+            elif self.i_f.get("awakeup") is not None:
+                while self.i_f.get("awakeup") == 0:
+                    await RisingEdge(self.i_f.aclk)
 
             for i in range(item.get_len()+1):
                 self.i_f.set("wvalid", 0)
