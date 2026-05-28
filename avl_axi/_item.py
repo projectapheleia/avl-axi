@@ -490,11 +490,15 @@ class WriteItem(SequenceItem):
                                             self.get("awlen", default=0),
                                             self.get("awsize", default=0),
                                             self.get("awburst", default=axi_burst_t.INCR))
+            nbytes   = 1 << self.get("awsize", default=0)
+            bus_bytes = self._i_f_.DATA_WIDTH // 8
 
-            wstrb_mask = (1 << (1 << self.get("awsize", default=0))) - 1
-            for i,a in enumerate(addresses):
-                offset = a & (self._i_f_.DATA_WIDTH//8)-1
-                self.wstrb[i] &= (wstrb_mask << offset)
+            for i, a in enumerate(addresses):  # we have to take into account unaligned addresses!
+                offset   = int(a) & (bus_bytes - 1)
+                cont_hi  = ((offset // nbytes) + 1) * nbytes   # upper edge of aligned container
+                active   = cont_hi - offset                     # bytes from lane0 to container end
+                mask     = ((1 << active) - 1) << offset
+                self.wstrb[i] &= mask
 
 class ReadItem(SequenceItem):
     def __init__(self, name: str, parent: avl.Component) -> None:  # noqa: C901
