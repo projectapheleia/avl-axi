@@ -70,13 +70,14 @@ class SequenceItem(avl.SequenceItem):
                             v[i].randomize()
 
         # Re-Size Read Data
+        rn = self.get_rlen()+1 if size is None else size
         for s in r_s_signals + ["r_wait_cycles"]:
             if hasattr(self, s):
                 if not self.has_rresp():
                     delattr(self, s)
                 else:
                     v = getattr(self, s)
-                    for i in range(n):
+                    for i in range(rn):
                         if i not in v:
                             v[i].value = 0
                             if randomize and v[i]._auto_random_:
@@ -92,7 +93,7 @@ class SequenceItem(avl.SequenceItem):
         if hasattr(self, "bidunq"):
             self.set("bidunq", self.get("awidunq"))
 
-        for i in range(n):
+        for i in range(rn):
             if hasattr(self, "rid"):
                 self.set("rid", self.get_id(), idx=i)
             if hasattr(self, "rloop"):
@@ -111,10 +112,15 @@ class SequenceItem(avl.SequenceItem):
         """
 
         # Check length
-        for s in w_m_signals + ["w_wait_cycles"] + r_s_signals + ["r_wait_cycles"]:
+        for s in w_m_signals + ["w_wait_cycles"]:
             if hasattr(self, s):
                 v = getattr(self, s)
                 assert len(v) == self.get_len() + 1
+
+        for s in r_s_signals + ["r_wait_cycles"]:
+            if hasattr(self, s):
+                v = getattr(self, s)
+                assert len(v) == self.get_rlen() + 1
 
         # Check size <= buswidth
         assert (1 << self.get("arsize", default=0)) <= self._i_f_.DATA_WIDTH // 8
@@ -153,7 +159,7 @@ class SequenceItem(avl.SequenceItem):
             assert self.get_idunq() == self.get("bidunq", default=0)
 
         if self.has_rresp():
-            for i in range(self.get_len()+1):
+            for i in range(self.get_rlen()+1):
                 # Signals which must match command -> response
                 assert self.get_id()    == self.get("rid", default=0, idx=i)
                 assert self.get_loop()  == self.get("rloop", default=0, idx=i)
@@ -289,6 +295,21 @@ class SequenceItem(avl.SequenceItem):
             return int(self.get("awlen", default=0))
         else:
             return int(self.get("arlen", default=0))
+
+    def get_rlen(self) -> int:
+        """
+        Return the number of expected read data beats.
+
+        For AtomicCompare the R channel returns half the write beats per spec:
+        "the number of read data transfers is half that specified by AWLEN".
+        For all other transactions this matches get_len().
+
+        :return: Number of read beats minus 1 (same convention as get_len)
+        """
+        length = self.get_len()
+        if self.get("awatop", default=axi_atomic_t.NON_ATOMIC) == axi_atomic_t.COMPARE:
+            return (length) // 2
+        return length
 
     def get_size(self) -> int:
         """

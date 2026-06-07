@@ -159,3 +159,7 @@ Features / Configuration
 .. note::
 
     \*SIDEBAND indicates driver and checks that values are consistent between request and response.
+
+.. note::
+
+    Narrow-Transfer Lane steering supported as of v0.6.2

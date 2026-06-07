@@ -12,6 +12,7 @@ import random
 from ._driver import Driver
 from ._item import ReadItem, SequenceItem
 from ._signals import ar_m_signals, ar_s_signals, r_s_signals
+from ._utils import get_beat_byte_offset
 
 
 class SubordinateReadDriver(Driver):
@@ -44,6 +45,14 @@ class SubordinateReadDriver(Driver):
 
         # Exclusive Monitor
         self.emonitor = None
+
+        # AXI A3.2.3 / A3.4.1 narrow-transfer byte-lane shift opt-in (via AgentCfg).
+        # Symmetric with ManagerReadDriver: when enabled, rdata stored in the item
+        # at lane 0 is shifted onto the byte lanes determined by the per-beat
+        # address before being driven to the bus. When disabled, rdata is driven
+        # verbatim (legacy behaviour).
+        _cfg_ = avl.Factory.get_variable(f"{self.get_full_name()}.cfg", None)
+        self.narrow_transfer_lane_steering = bool(_cfg_.narrow_transfer_lane_steering) if _cfg_ is not None else False
 
     async def reset(self) -> None:
         """
@@ -160,14 +169,35 @@ class SubordinateReadDriver(Driver):
                 self.i_f.set("rpending", 1)
                 await RisingEdge(self.i_f.aclk)
 
+            # Compute the byte-lane offset for this beat. For ATOP WriteItems the
+            # address/control fields are aw*; for ReadItems ar*. Mirrors the
+            # ManagerReadDriver sampling logic so master and subordinate agree
+            # on lane placement.
+            if self.narrow_transfer_lane_steering:
+                if hasattr(item, "awaddr"):
+                    addr_key, size_key, burst_key = "awaddr", "awsize", "awburst"
+                else:
+                    addr_key, size_key, burst_key = "araddr", "arsize", "arburst"
+                base_addr = int(item.get(addr_key,  default=0))
+                asize     = int(item.get(size_key,  default=0))
+                aburst    = int(item.get(burst_key, default=1))
+                rlen      = item.get_rlen()
+                byte_offset = get_beat_byte_offset(
+                    base_addr, item._rcnt_, rlen, asize, aburst, self.i_f.STRB_WIDTH
+                )
+            else:
+                byte_offset = 0
+
             for s in r_s_signals:
                 if s == "rvalid":
                     self.i_f.set(s, 1)
                 elif s == "rlast":
-                    self.i_f.set(s, item._rcnt_ == item.get_len())
+                    self.i_f.set(s, item._rcnt_ == item.get_rlen())
                 elif s == "rpending":
                     if random.random() > self.pending_rate_limit():
                         self.i_f.set(s, 0)
+                elif s == "rdata" and byte_offset:
+                    self.i_f.set(s, int(item.get(s, idx=item._rcnt_, default=0)) << (byte_offset * 8))
                 else:
                     self.i_f.set(s, item.get(s, idx=item._rcnt_, default=0))
 
@@ -180,7 +210,7 @@ class SubordinateReadDriver(Driver):
             self.emonitor.process_read(item)
 
             item._rcnt_ += 1
-            if item._rcnt_ == item.get_len()+1:
+            if item._rcnt_ == item.get_rlen()+1:
                 delattr(item, "_rcnt_")
                 self.responseQ.pop(idx)
 

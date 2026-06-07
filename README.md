@@ -105,6 +105,7 @@ Of the advanced features full support of exclusives and atomic operation are pro
 - Bandwidth monitor generating bus activity plots over user defined windows during simulation
 - Functional coverage including performance measurements
 - Searchable trace file generation
+- Narrow-transfer lane steering
 
 ---
 
