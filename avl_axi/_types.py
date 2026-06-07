@@ -16,7 +16,7 @@ class axi_burst_t(avl.Logic):
     WRAP = 2
     RESERVED = 3
 
-    def __init__(self, value : Any, width : int = 1, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
+    def __init__(self, value : Any, width : int = 2, auto_random : bool=True, fmt: Callable[..., int] = None) -> None:
         """
         Enumeration for the AXI Burst type
             - 0 : FIXED
@@ -32,7 +32,8 @@ class axi_burst_t(avl.Logic):
         super().__init__(value, width=width, auto_random=auto_random, fmt=fmt)
 
         # Avoid randomizing to reserve value
-        self.add_constraint("c_reserved", lambda x: x != axi_burst_t.RESERVED)
+        if auto_random:
+            self.add_constraint("c_reserved", lambda x: x != axi_burst_t.RESERVED)
 
         if self._fmt_ is None:
             self._fmt_ = self.fmt
@@ -60,10 +61,8 @@ class axi_burst_t(avl.Logic):
                 axi_burst_t.RESERVED : "RESERVED",
             }
 
-        for i in range(axi_burst_t.FIXED, axi_burst_t.RESERVED, 1):
-            if i > (1<<self.width)-1:
-                del d[i]
-        return d
+        max_val = (1 << self.width) - 1
+        return {k: v for k, v in d.items() if k <= max_val}
 
     def _cast_(self, other : Any) -> bool:
         """
@@ -88,7 +87,7 @@ class axi_resp_t(avl.Logic):
     RESERVED = 6
     UNSUPPORTED = 7
 
-    def __init__(self, value : Any, width : int = 1, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
+    def __init__(self, value : Any, width : int = 3, auto_random : bool=True, fmt: Callable[..., int] = None) -> None:
         """
         Enumeration for the AXI Response type
             - 0 : OKAY
@@ -109,7 +108,8 @@ class axi_resp_t(avl.Logic):
         super().__init__(value, width=width, auto_random=auto_random, fmt=fmt)
 
         # Avoid randomizing to reserve value
-        self.add_constraint("c_reserved", lambda x: x != axi_resp_t.RESERVED)
+        if auto_random:
+            self.add_constraint("c_reserved", lambda x: x != axi_resp_t.RESERVED)
 
         if self._fmt_ is None:
             self._fmt_ = self.fmt
@@ -141,10 +141,8 @@ class axi_resp_t(avl.Logic):
                 axi_resp_t.UNSUPPORTED : "UNSUPPORTED",
             }
 
-        for i in range(axi_resp_t.OKAY, axi_resp_t.UNSUPPORTED, 1):
-            if i > (1<<self.width)-1:
-                del d[i]
-        return d
+        max_val = (1 << self.width) - 1
+        return {k: v for k, v in d.items() if k <= max_val}
 
     def _cast_(self, other : Any) -> bool:
         """
@@ -165,7 +163,7 @@ class axi_domain_t(avl.Logic):
     OUTER_SHAREABLE = 2
     SYSTEM = 3
 
-    def __init__(self, value : Any, width : int = 1, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
+    def __init__(self, value : Any, width : int = 2, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
         """
         Enumeration for the AXI domain type
             - 0 : NON_SHAREABLE
@@ -206,11 +204,8 @@ class axi_domain_t(avl.Logic):
                 axi_domain_t.SYSTEM          : "SYSTEM",
             }
 
-        for i in range(axi_domain_t.NON_SHAREABLE, axi_domain_t.SYSTEM, 1):
-            if i > (1<<self.width)-1:
-                del d[i]
-
-        return d
+        max_val = (1 << self.width) - 1
+        return {k: v for k, v in d.items() if k <= max_val}
 
 
 
@@ -252,7 +247,7 @@ class axi_atomic_t(avl.Logic):
     LOAD_BE_UMAX  = 0b101110
     LOAD_BE_UMIN  = 0b101111
 
-    def __init__(self, value : Any, width : int = 1, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
+    def __init__(self, value : Any, width : int = 6, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
         """
         Enumeration for the AXI Atomic type
 
@@ -321,11 +316,8 @@ class axi_atomic_t(avl.Logic):
                 axi_atomic_t.LOAD_BE_UMIN  : "LOAD_BE_UMIN",
             }
 
-        for i in range(axi_atomic_t.NON_ATOMIC, axi_atomic_t.LOAD_BE_UMIN, 1):
-            if i > (1<<self.width)-1:
-                del d[i]
-
-        return d
+        max_val = (1 << self.width) - 1
+        return {k: v for k, v in d.items() if k <= max_val}
 
     def has_bresp(self) -> bool:
         """
@@ -372,7 +364,7 @@ class axi_secsid_t(avl.Logic):
     REALM = 2
     RESERVED = 3
 
-    def __init__(self, value : Any, width : int = 1, auto_random : bool=False, fmt: Callable[..., int] = None) -> None:
+    def __init__(self, value : Any, width : int = 2, auto_random : bool=True, fmt: Callable[..., int] = None) -> None:
         """
         Enumeration for the AXI secure stream identifier type
             - 0 : NON_SECURE
@@ -388,7 +380,8 @@ class axi_secsid_t(avl.Logic):
         super().__init__(value, width=width, auto_random=auto_random, fmt=fmt)
 
         # Avoid randomizing to reserve value
-        self.add_constraint("c_reserved", lambda x: x != axi_secsid_t.RESERVED)
+        if auto_random:
+            self.add_constraint("c_reserved", lambda x: x != axi_secsid_t.RESERVED)
 
         if self._fmt_ is None:
             self._fmt_ = self.fmt
@@ -416,11 +409,8 @@ class axi_secsid_t(avl.Logic):
                 axi_secsid_t.RESERVED     : "RESERVED",
             }
 
-        for i in range(axi_secsid_t.NON_SECURE, axi_secsid_t.RESERVED, 1):
-            if i > (1<<self.width)-1:
-                del d[i]
-
-        return d
+        max_val = (1 << self.width) - 1
+        return {k: v for k, v in d.items() if k <= max_val}
 
 def signal_to_type(signal : str) -> Any:
     """
