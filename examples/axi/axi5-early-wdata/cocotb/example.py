@@ -46,7 +46,7 @@ async def test(dut):
 
     avl.Factory.set_variable("*.agent.mwdrv.control_rate_limit", lambda: 0.05)
     avl.Factory.set_variable("*.agent.mwdrv.data_rate_limit", lambda: 0.5)
-    avl.Factory.set_variable("*.agent.mwdrv.allow_early_data", False)
+    avl.Factory.set_variable("*.agent.mwdrv.allow_early_data", True)
 
 
     avl.Factory.set_override_by_type(avl_axi.SubordinateReadDriver, avl_axi.SubordinateReadRandomDriver)
