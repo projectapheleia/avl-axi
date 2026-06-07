@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.7.0] - 2026-06-07
+
+### Fixed
+ - [#35](https://github.com/projectapheleia/avl-axi/issues/35) Allow_Early_Data: Awake condition limited use
+ - [#36](https://github.com/projectapheleia/avl-axi/issues/36) Item(): Post randomize() not applying constraints to Write Strobe Correctly
+ - [#37](https://github.com/projectapheleia/avl-axi/issues/37) Types(): Issues with randomization and atomics not constrained for all values
+
 ## [v0.6.2] - 2026-05-17
 
 ### Fixed
