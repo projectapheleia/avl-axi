@@ -1,4 +1,4 @@
-.. avl-apb documentation master file
+.. avl-axi documentation master file
 
 Apheleia Verification Library - AMBA eXtensible Interface
 ==========================================================================
