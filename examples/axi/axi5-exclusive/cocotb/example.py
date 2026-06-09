@@ -19,8 +19,13 @@ class DirectedSequence(avl_axi.ManagerSequence):
         self.info(f"Starting Directed Manager sequence {self.get_full_name()}")
         self.wait_for = "response"
 
+        # Test : Non exclusive read
+        rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=0)
+        assert rsp.rresp[0] == axi_resp_t.OKAY
+
         # Test : Normal operation
-        await self.read(araddr=0x1000, arid=1, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Matching Exclusive Write - return EXOKAY
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -31,7 +36,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Test : Clear by partial Match (smaller)
-        await self.read(araddr=0x1000, arid=2, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=2, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Partial Matching Exclusive Write - return OKAY
         rsp = await self.write(awaddr=0x1000, awid=2, awsize=2, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -42,7 +48,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Test : Clear by artial Match (bigger)
-        await self.read(araddr=0x1000, arid=3, arsize=0, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=3, arsize=0, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Partial Matching Exclusive Write - return OKAY
         rsp = await self.write(awaddr=0x1000, awid=3, awsize=2, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -53,7 +60,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Test : Clear by Miss
-        await self.read(araddr=0x1000, arid=3, arsize=0, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=3, arsize=0, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Partial Matching Exclusive Write - return OKAY
         rsp = await self.write(awaddr=0x2000, awid=3, awsize=2, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -64,7 +72,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Test : Clear by exact match with other manager
-        await self.read(araddr=0x1000, arid=4, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=4, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Partial Matching Exclusive Write - return OKAY
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -75,7 +84,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Test : Clear by partial match with other manager
-        await self.read(araddr=0x1000, arid=5, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=5, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Partial Matching Exclusive Write - return OKAY
         rsp = await self.write(awaddr=0x1000, awid=2, awsize=1, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -86,7 +96,8 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Test : No clear by write to different range
-        await self.read(araddr=0x1000, arid=0, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=0, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Miss (different master) - return OKAY
         rsp = await self.write(awaddr=0x1020, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
@@ -97,35 +108,42 @@ class DirectedSequence(avl_axi.ManagerSequence):
         assert rsp.bresp == axi_resp_t.EXOKAY
 
         # Test : Update
-        await self.read(araddr=0x1000, arid=0, arsize=3, arlock=1)
-        await self.read(araddr=0x2000, arid=0, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=0, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
+        rsp = await self.read(araddr=0x2000, arid=0, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Miss - would have hit first - return OK
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
         assert rsp.bresp == axi_resp_t.OKAY
 
         # Matching Exclusive Write - return EXOKAY
-        await self.read(araddr=0x1000, arid=0, arsize=3, arlock=1)
-        await self.read(araddr=0x2000, arid=0, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=0, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
+        rsp = await self.read(araddr=0x2000, arid=0, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
         rsp = await self.write(awaddr=0x2000, awid=0, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
         assert rsp.bresp == axi_resp_t.EXOKAY
 
         # Test : Read burst - Write single Match
-        await self.read(araddr=0x1000, arid=1, arsize=3, arlen=2, awburst=1, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlen=2, awburst=1, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Matching Exclusive Write - return EXOKAY
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
         assert rsp.bresp == axi_resp_t.EXOKAY
 
         # Test : Read Single - Write burst Match
-        await self.read(araddr=0x1000, arid=1, arsize=3, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Matching Exclusive Write - return EXOKAY
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, awlen=1, awburst=2, wdata=[0xdeadbeef, 0xcafebabe], wstrb=[0xFF]*2, awlock=1)
         assert rsp.bresp == axi_resp_t.EXOKAY
 
         # Test : Read Burst - Write miss 0
-        await self.read(araddr=0x1000, arid=1, arsize=3, arlen=1, awburst=1, arlock=1)
+        rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlen=1, awburst=1, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
 
         # Matching Exclusive Write (wrong beat) - return OKAY
         rsp = await self.write(awaddr=0x1008, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
