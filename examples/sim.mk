@@ -36,7 +36,3 @@ clean::
 	rm -rf cocotb/__pycache__/
 	rm -rf *.txt *.xml *.json *.csv *.yaml *.vcd *.png sim.log html transcript modelsim.ini ucli.key
 
-debug:
-	@echo "PYTHONPATH: $(PYTHONPATH)"
-	@echo "PWD: $(PWD)"
-	@echo "MAKEFILE_DIR: $(MAKEFILE_DIR)"
