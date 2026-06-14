@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.7.1] 0 2026-06-14
+
+### Fixed
+ - [#40](https://github.com/projectapheleia/avl-axi/issues/40) Exclusives: Incorrect rresp behaviour
+
 ## [v0.7.0] - 2026-06-07
 
 ### Fixed
@@ -37,7 +42,7 @@
  - [#19](https://github.com/projectapheleia/avl-axi/issues/19) Unaligned reads return unexpected data
 
 ## [v0.4.1] - 2026-01-18
-
+()
 ### Added
 
  - (https://github.com/projectapheleia/avl-axi/pull/16) feat: write()/read() wait for response by default
