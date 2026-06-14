@@ -54,9 +54,9 @@ The recommended way to connect to the AVL environment is via the factory.
 
 .. code-block:: python
 
-    avl.Factory.set_variable("*.hdl", dut.apb_if)
+    avl.Factory.set_variable("*.hdl", dut.axi_if)
 
-When the agent is created it will automatically use this factory setting to connect to the APB interface.
+When the agent is created it will automatically use this factory setting to connect to the AXI interface.
 
 Parameterization
 ----------------
