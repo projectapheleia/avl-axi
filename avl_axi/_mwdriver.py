@@ -6,7 +6,7 @@
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge, NextTimeStep
+from cocotb.triggers import RisingEdge, NextTimeStep, ReadOnly
 import random
 
 from ._driver import Driver
@@ -143,7 +143,11 @@ class ManagerWriteDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("awready", default=1) and self.i_f.get("awakeup", default=1):
+                await ReadOnly()
+                awr = self.i_f.get("awready", default=1)
+                awk = self.i_f.get("awakeup", default=1)
+                await NextTimeStep()
+                if awr and awk:
                     break
 
             # Clear the bus
@@ -250,6 +254,8 @@ class ManagerWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or
         other behavior.
         """
+        await ReadOnly()
+        await NextTimeStep()
         for s in b_m_signals:
             self.i_f.set(s, 0)
 
@@ -271,7 +277,11 @@ class ManagerWriteDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if bool(self.i_f.get("bvalid", default=1)) and bool(self.i_f.get("bready", default=1)):
+                await ReadOnly()
+                bv = bool(self.i_f.get("bvalid", default=1))
+                br = bool(self.i_f.get("bready", default=1))
+                await NextTimeStep()
+                if bv and br:
                     break
 
             bid = int(self.i_f.get("bid", default=0))

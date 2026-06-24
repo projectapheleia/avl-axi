@@ -6,7 +6,7 @@
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, ReadOnly, NextTimeStep
 import random
 
 from ._driver import Driver
@@ -128,7 +128,11 @@ class ManagerReadDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if self.i_f.get("arready", default=1) and self.i_f.get("awakeup", default=1):
+                await ReadOnly()
+                arr = self.i_f.get("arready", default=1)
+                awk = self.i_f.get("awakeup", default=1)
+                await NextTimeStep()
+                if arr and awk:
                     break
 
             # Clear the bus
@@ -157,6 +161,8 @@ class ManagerReadDriver(Driver):
         This method is called after driving the response signals.
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        await ReadOnly()
+        await NextTimeStep()
         for s in r_m_signals:
             self.i_f.set(s, 0)
 
@@ -180,7 +186,11 @@ class ManagerReadDriver(Driver):
 
             while True:
                 await RisingEdge(self.i_f.aclk)
-                if bool(self.i_f.get("rvalid", default=1)) and bool(self.i_f.get("rready", default=1)):
+                await ReadOnly()
+                rv = bool(self.i_f.get("rvalid", default=1))
+                rr = bool(self.i_f.get("rready", default=1))
+                await NextTimeStep()
+                if rv and rr:
                     break
 
             rid = int(self.i_f.get("rid", default=0))
