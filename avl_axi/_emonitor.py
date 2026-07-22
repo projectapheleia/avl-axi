@@ -124,7 +124,8 @@ class ExclusivityMonitor(avl.Component):
                                                  item.get("arsize", default=0),
                                                  item.get("arburst", default=1)
                                                 )):
-                item.set("rresp", axi_resp_t.EXOKAY, idx=i)
+                if item.get("rresp", idx=i, default=axi_resp_t.OKAY) == axi_resp_t.OKAY:  # only overwrite if rresp is OKAY, otherwise keep the original value (e.g., SLVERR)
+                    item.set("rresp", axi_resp_t.EXOKAY, idx=i)
 
 
 __all__ = ["ExclusivityMonitor"]

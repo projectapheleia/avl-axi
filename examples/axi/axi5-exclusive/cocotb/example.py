@@ -23,9 +23,17 @@ class DirectedSequence(avl_axi.ManagerSequence):
         rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=0)
         assert rsp.rresp[0] == axi_resp_t.OKAY
 
+        # Test : Non exclusive read - bad address
+        rsp = await self.read(araddr=0x3000, arid=1, arsize=3, arlock=0)
+        assert rsp.rresp[0] == axi_resp_t.DECERR
+
         # Test : Normal operation
         rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=1)
         assert rsp.rresp[0] == axi_resp_t.EXOKAY
+
+        # Test : Normal operation - bad address
+        rsp = await self.read(araddr=0x3000, arid=1, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.DECERR
 
         # Matching Exclusive Write - return EXOKAY
         rsp = await self.write(awaddr=0x1000, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
