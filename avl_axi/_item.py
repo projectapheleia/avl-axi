@@ -263,6 +263,18 @@ class SequenceItem(avl.SequenceItem):
         else:
             return int(self.get("arid", default=0))
 
+    def set_id(self, id: int) -> None:
+        """
+        Set ID
+
+        :param id: ID to set (awid for writes, arid for reads)
+        :type id: int
+        """
+        if hasattr(self, "awaddr"):
+            self.set("awid", id)
+        else:
+            self.set("arid", id)
+
     def get_idunq(self) -> int:
         """
         Return ID Unique
