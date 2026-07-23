@@ -118,7 +118,8 @@ class ExclusivityMonitor(avl.Component):
         (lo, hi) = self._get_range_(item)
 
         if item.arlock:
-            self.ranges[id] = (lo, hi)
+            if all([resp_type in item.get("rresp").values() for resp_type in [axi_resp_t.OKAY]]):  # check that we don't have any SLVERR or DECERR responses in the read response
+                self.ranges[id] = (lo, hi)
             for i,_ in enumerate(get_burst_addresses(item.get("araddr"),  # change rresp value to EXOKAY, since when arlock=1, rresp is always EXOKAY
                                                  item.get("arlen", default=0),
                                                  item.get("arsize", default=0),
