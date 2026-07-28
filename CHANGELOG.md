@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+ - [#45](https://github.com/projectapheleia/avl-axi/issues/45) Manager drivers cannot issue true back-to-back AW/AR (inter-transaction VALID bubble): opt-in `back_to_back` driver option
+
 ## [v0.7.1] 0 2026-06-14
 
 ### Fixed

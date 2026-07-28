@@ -71,47 +71,72 @@ class ManagerReadDriver(Driver):
         Drive the control signals based on the items in the control queue.
         This method is called during the run phase of the simulation.
         It waits for items in the control queue and drives the corresponding signals.
+
+        When ``self.back_to_back`` is enabled the address-channel VALID is held asserted across
+        consecutive queued items (payload changing each accepted cycle) to allow true
+        back-to-back issuance. VALID is de-asserted before any blocking wait so an accepted
+        address is never re-sampled, and when the queue drains or on reset.
         """
         self.controlQ = []
+        valid_held = False
+
+        def _release_valid() -> None:
+            nonlocal valid_held
+            if valid_held:
+                self.i_f.set("arvalid", 0)
+                valid_held = False
+
         while True:
 
             while not self.controlQ or self.i_f.get("aresetn") == 0:
+                _release_valid()
                 await RisingEdge(self.i_f.aclk)
 
             item = self.controlQ.pop(0)
             self.wake_export.write(item)
 
-            self.i_f.set("arvalid", 0)
+            if not self.back_to_back:
+                self.i_f.set("arvalid", 0)
 
             # Wake
+            _release_valid()
             await item.wait_on_event("awake")
 
             # Credit Control
             rp = [item.get("arrp", default=0)]
             if self.i_f.Shared_Credits_AR == 1:
                 rp.append(self.i_f.Num_RP_AR)
+            _release_valid()
             sel_rp = await self.wait_on_credit("ar", rp)
 
             # Rate Limiter
+            _release_valid()
             await self.wait_on_rate(self.control_rate_limit())
 
             # Unique ID
             if item.get_idunq() or item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
+                if self._unique_ids_[item.get_id()] > 0:
+                    _release_valid()
                 while self._unique_ids_[item.get_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             # TAG Unique ID
             if item.get_tagop() != 0:
+                if self._tag_ids_[item.get_id()] > 0:
+                    _release_valid()
                 while self._tag_ids_[item.get_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             # Max Outstanding
+            if self.max_outstanding is not None and self._outstanding_transactions_ >= self.max_outstanding:
+                _release_valid()
             while self.max_outstanding is not None and self._outstanding_transactions_ >= self.max_outstanding:
                 await RisingEdge(self.i_f.aclk)
             self._outstanding_transactions_ += 1
 
             # Pending
             if not bool(self.i_f.get("arpending", default=1)):
+                _release_valid()
                 self.i_f.set("arpending", 1)
                 await RisingEdge(self.i_f.aclk)
 
@@ -125,14 +150,17 @@ class ManagerReadDriver(Driver):
                         self.i_f.set(s, 0)
                 else:
                     self.i_f.set(s, item.get(s, default=0))
+            valid_held = True
 
             while True:
                 await RisingEdge(self.i_f.aclk)
                 if self.i_f.get("arready", default=1) and self.i_f.get("awakeup", default=1):
                     break
 
-            # Clear the bus
-            await self.quiesce_control()
+            # Clear the bus - unless holding VALID high for the next queued item (back-to-back)
+            if not (self.back_to_back and self.controlQ and self.i_f.get("aresetn") != 0):
+                await self.quiesce_control()
+                valid_held = False
 
             # Inform sequence control phase is completed
             item.set_event("control", item)

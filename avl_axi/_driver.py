@@ -49,6 +49,13 @@ class Driver(avl.Driver):
         self.max_outstanding = avl.Factory.get_variable(f"{self.get_full_name()}.max_outstanding", None)
         """Maximum number of outstanding transactions"""
 
+        self.back_to_back = avl.Factory.get_variable(f"{self.get_full_name()}.back_to_back", False)
+        """Keep the address-channel VALID (AWVALID/ARVALID) asserted across consecutive queued
+        items so the manager can issue true back-to-back AW/AR transactions with no idle bubble.
+        Default False preserves the legacy behaviour. VALID is still de-asserted before any
+        blocking wait (wake / credit / rate / unique-ID / max_outstanding / pending) so an
+        accepted address is never re-sampled, and when the control queue drains or on reset."""
+
         if not callable(self.control_rate_limit):
             raise TypeError("control rate_limit must be a callable (lambda function) that returns a float between 0.0 and 1.0")
 
