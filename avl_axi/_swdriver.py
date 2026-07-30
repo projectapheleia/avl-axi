@@ -233,6 +233,9 @@ class SubordinateWriteDriver(Driver):
             # Exclusive monitor
             self.emonitor.process_write(item)
 
+            # Response override hook (Factory-driven; overridable by subclasses)
+            self._apply_response_overrides_(item)
+
             # Credit Control
             await self.wait_on_credit("b", [0])
 
@@ -311,6 +314,54 @@ class SubordinateWriteDriver(Driver):
 
         return item
 
+    def _apply_response_overrides_(self, item) -> None:
+        """
+        Post-response hook: inspect the whole item and modify its response fields in place before the
+        item is driven onto the B channel.
+
+        Default behavior:
+        Reads the Factory variable `<full_name>.response_overrides`
+        (default is None) on every call, so users may register, replace,
+        or clear rules dynamically at any point during simulation.
+
+        Expected format: list of dicts, each with:
+              {
+                  "resp":        axi_resp_t,        # required
+                  "addr_range":  (lo, hi) or None,  # optional, inclusive
+                  "match_count": int or None,       # optional (None = unlimited)
+              }
+
+        A rule with no addr_range matches every transaction. match_count, if it is set, it is decremented on match;
+        rules with match_count <= 0 are skipped.
+
+        Subclasses may override this method entirely with any matching
+        logic (e.g. by burst type, size, protection, exclusive flag).
+        """
+        overrides = avl.Factory.get_variable(
+            f"{self.get_full_name()}.response_overrides", None
+        )
+        if not overrides:
+            return
+
+        addr = item.get("awaddr", default=0)
+
+        for rule in overrides:
+            if rule.get("match_count") is not None and rule["match_count"] <= 0:
+                continue
+
+            addr_range = rule.get("addr_range")
+            if addr_range is not None:
+                lo, hi = addr_range
+                if not (lo <= addr <= hi):
+                    continue
+
+            item.set("bresp", rule["resp"])
+
+            if rule.get("match_count") is not None:
+                rule["match_count"] -= 1
+
+            break
+            
 class SubordinateWriteMemoryDriver(SubordinateWriteDriver):
 
     def __init__(self, name: str, parent: avl.Component) -> None:
