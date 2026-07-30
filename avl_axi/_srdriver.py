@@ -158,6 +158,11 @@ class SubordinateReadDriver(Driver):
 
             item = await self.get_next_item(self.responseQ[idx])
 
+            # Response override hook (Factory-driven; overridable by subclasses).
+            # Applied once per burst on the first beat; stamps all rresp beats.
+            if item._rcnt_ == 0:
+                self._apply_response_overrides_(item)
+
             # Credit Control
             await self.wait_on_credit("r", [0])
 
@@ -261,6 +266,54 @@ class SubordinateReadDriver(Driver):
 
         return item
 
+    def _apply_response_overrides_(self, item) -> None:
+        """
+        Post-response hook: inspect the whole item and modify its response
+        fields in place before the R-channel beats are driven onto the wire.
+
+        Default behavior:
+        Reads the Factory variable `<full_name>.response_overrides`
+        (default `None`) on every call.
+
+        Expected format: list of dicts:
+          {
+              "resp":        axi_resp_t,        # required
+              "addr_range":  (lo, hi) or None,  # optional, inclusive
+              "match_count": int or None,       # optional (None = unlimited)
+          }
+        Rules are walked in registration order; first match wins. A rule
+        with no `addr_range` matches every transaction. When a rule
+        matches, its `resp` is applied to every `rresp` beat of the
+        burst uniformly. `match_count`, if set, is decremented on match.
+        """
+        overrides = avl.Factory.get_variable(
+            f"{self.get_full_name()}.response_overrides", None
+        )
+        if not overrides:
+            return
+
+        addr = item.get("araddr", default=0)
+
+        for rule in overrides:
+            if rule.get("match_count") is not None and rule["match_count"] <= 0:
+                continue
+
+            addr_range = rule.get("addr_range")
+            if addr_range is not None:
+                lo, hi = addr_range
+                if not (lo <= addr <= hi):
+                    continue
+
+            resp = rule["resp"]
+            nbeats = item.get_rlen() + 1
+            for i in range(nbeats):
+                item.set("rresp", resp, idx=i)
+
+            if rule.get("match_count") is not None:
+                rule["match_count"] -= 1
+
+            break
+            
 class SubordinateReadRandomDriver(SubordinateReadDriver):
 
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
