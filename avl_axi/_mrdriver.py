@@ -54,6 +54,7 @@ class ManagerReadDriver(Driver):
         # Write Signals
         for s in ar_m_signals + r_m_signals:
             self.i_f.set(s, 0)
+        self.response_pending = 0
 
     async def quiesce_control(self) -> None:
         """
