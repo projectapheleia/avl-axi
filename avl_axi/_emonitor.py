@@ -118,13 +118,15 @@ class ExclusivityMonitor(avl.Component):
         (lo, hi) = self._get_range_(item)
 
         if item.arlock:
-            self.ranges[id] = (lo, hi)
+            if all(v == axi_resp_t.OKAY for v in item.get("rresp").values()):  # only track the range if every beat succeeded - a SLVERR/DECERR on any beat must not grant exclusivity
+                self.ranges[id] = (lo, hi)
             for i,_ in enumerate(get_burst_addresses(item.get("araddr"),  # change rresp value to EXOKAY, since when arlock=1, rresp is always EXOKAY
                                                  item.get("arlen", default=0),
                                                  item.get("arsize", default=0),
                                                  item.get("arburst", default=1)
                                                 )):
-                item.set("rresp", axi_resp_t.EXOKAY, idx=i)
+                if item.get("rresp", idx=i, default=axi_resp_t.OKAY) == axi_resp_t.OKAY:  # only overwrite if rresp is OKAY, otherwise keep the original value (e.g., SLVERR)
+                    item.set("rresp", axi_resp_t.EXOKAY, idx=i)
 
 
 __all__ = ["ExclusivityMonitor"]

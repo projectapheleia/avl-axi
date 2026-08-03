@@ -23,6 +23,31 @@ class DirectedSequence(avl_axi.ManagerSequence):
         rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=0)
         assert rsp.rresp[0] == axi_resp_t.OKAY
 
+        # Test : Non exclusive read - bad address
+        rsp = await self.read(araddr=0x3000, arid=1, arsize=3, arlock=0)
+        assert rsp.rresp[0] == axi_resp_t.DECERR
+
+        # Test : Exclusive read - bad address
+        #   - must not overwrite DECERR with EXOKAY, must not grant exclusivity
+        rsp = await self.read(araddr=0x3000, arid=1, arsize=3, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.DECERR
+
+        # Matching Exclusive Write - address is still bad, so bresp is DECERR from the memory;
+        # if the errored read had incorrectly set the range, this would be overwritten to EXOKAY instead
+        rsp = await self.write(awaddr=0x3000, awid=1, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
+        assert rsp.bresp == axi_resp_t.DECERR
+
+        # Test : Exclusive read burst - partial error (mixed OKAY/DECERR beats, straddling the range boundary)
+        #   - the good beat is upgraded to EXOKAY, the errored beat keeps its DECERR
+        #   - the whole burst must not be granted exclusivity because one beat errored
+        rsp = await self.read(araddr=0x2FF8, arid=6, arsize=3, arlen=1, arburst=1, arlock=1)
+        assert rsp.rresp[0] == axi_resp_t.EXOKAY
+        assert rsp.rresp[1] == axi_resp_t.DECERR
+
+        # Matching Exclusive Write - return OKAY, since the read had an errored beat and must not have set the range
+        rsp = await self.write(awaddr=0x2FF8, awid=6, awsize=3, wdata=[0xdeadbeef], wstrb=[0xFF], awlock=1)
+        assert rsp.bresp == axi_resp_t.OKAY
+
         # Test : Normal operation
         rsp = await self.read(araddr=0x1000, arid=1, arsize=3, arlock=1)
         assert rsp.rresp[0] == axi_resp_t.EXOKAY
