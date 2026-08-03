@@ -4,6 +4,7 @@
 
 ### Fixed
  - [PR #44](https://github.com/projectapheleia/avl-axi/pull/44) Exclusives: EXOKAY incorrectly overwriting SLVERR/DECERR on read, and exclusivity granted despite an errored beat
+ - [PR #42](https://github.com/projectapheleia/avl-axi/pull/42) Manager Write/Read Drivers: response_pending not cleared on mid-sim reset, causing hangs or IndexError
 
 ## [v0.7.1] 0 2026-06-14
 
