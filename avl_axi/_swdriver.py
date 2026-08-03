@@ -230,8 +230,14 @@ class SubordinateWriteDriver(Driver):
 
             item = await self.get_next_item(self.responseQ.pop(idx))
 
-            # Exclusive monitor
+            # Exclusive monitor and response override hooks - whether a given
+            # override rule affects the monitor's view (before) or only the
+            # final wire value (after) - or both - is chosen per-rule via
+            # override_before_execution/override_after_execution (see
+            # Driver._apply_response_overrides_).
+            self._apply_response_overrides_(item, when="before")
             self.emonitor.process_write(item)
+            self._apply_response_overrides_(item, when="after")
 
             # Credit Control
             await self.wait_on_credit("b", [0])

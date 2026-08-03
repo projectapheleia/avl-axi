@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+ - [PR #47](https://github.com/projectapheleia/avl-axi/pull/47) Subordinate Write/Read Drivers: Factory-driven `response_overrides` hook to force a chosen response (optionally address-ranged, budget-limited via `match_count`) onto the B/R channel. Shared implementation lives in `Driver._apply_response_overrides_()`; each rule independently opts in to running before and/or after the exclusivity monitor via `override_before_execution`/`override_after_execution` (must be exactly `True`; `None`/`False` means it doesn't apply at that call site). See `examples/axi/axi5-response-override` and `doc/source/components/subordinate.rst`
+
 ### Fixed
  - [PR #44](https://github.com/projectapheleia/avl-axi/pull/44) Exclusives: EXOKAY incorrectly overwriting SLVERR/DECERR on read, and exclusivity granted despite an errored beat
  - [PR #42](https://github.com/projectapheleia/avl-axi/pull/42) Manager Write/Read Drivers: response_pending not cleared on mid-sim reset, causing hangs or IndexError

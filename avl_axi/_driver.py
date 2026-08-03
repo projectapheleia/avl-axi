@@ -246,6 +246,81 @@ class Driver(avl.Driver):
         """
         raise NotImplementedError("Drive method must be implemented in subclasses")
 
+    def _apply_response_overrides_(self, item : SequenceItem, when : str) -> None:
+        """
+        Post-response hook: inspect the whole item and, on a match, stamp a
+        Factory-configured response onto its response field(s) in place.
+        Shared by SubordinateReadDriver/SubordinateWriteDriver - detects
+        which channel `item` belongs to via `hasattr(item, "awaddr")` and
+        applies to every `rresp` beat (reads) or the single `bresp` (writes).
+
+        Reads the Factory variable `<full_name>.response_overrides`
+        (default `None`) on every call, so rules may be registered, replaced,
+        or cleared dynamically at any point during simulation.
+
+        Expected format: list of dicts, each with:
+          {
+              "resp":                      axi_resp_t,        # required
+              "addr_range":                (lo, hi) or None,  # optional, inclusive
+              "match_count":                int or None,      # optional (None = unlimited)
+              "override_before_execution":  bool or None,     # optional, apply at the "before" call site
+              "override_after_execution":   bool or None,     # optional, apply at the "after" call site
+          }
+
+        Rules are walked in registration order; first match wins per call.
+        A rule only applies at a given call site if the corresponding
+        `override_before_execution`/`override_after_execution` flag is
+        exactly `True` - `None` (the default) or `False` both mean "don't
+        apply here". A rule with no `addr_range` matches every transaction.
+        `match_count`, if set, is decremented independently at each call
+        site where the rule fires.
+
+        Callers decide what "before"/"after" mean (e.g. before/after the
+        exclusivity monitor runs) by choosing where to call this method;
+        this hook itself has no opinion on ordering.
+
+        :param item: The item whose response is (possibly) being overridden
+        :type item: SequenceItem
+        :param when: Which call site this is - "before" or "after" -
+            selects which flag a rule must set to apply here
+        :type when: str
+        """
+        overrides = avl.Factory.get_variable(
+            f"{self.get_full_name()}.response_overrides", None
+        )
+        if not overrides:
+            return
+
+        flag = "override_before_execution" if when == "before" else "override_after_execution"
+
+        is_write = hasattr(item, "awaddr")
+        addr = item.get("awaddr" if is_write else "araddr", default=0)
+
+        for rule in overrides:
+            if rule.get(flag) is not True:
+                continue
+
+            if rule.get("match_count") is not None and rule["match_count"] <= 0:
+                continue
+
+            addr_range = rule.get("addr_range")
+            if addr_range is not None:
+                lo, hi = addr_range
+                if not (lo <= addr <= hi):
+                    continue
+
+            resp = rule["resp"]
+            if is_write:
+                item.set("bresp", resp)
+            else:
+                for i in range(item.get_rlen() + 1):
+                    item.set("rresp", resp, idx=i)
+
+            if rule.get("match_count") is not None:
+                rule["match_count"] -= 1
+
+            break
+
     async def get_next_item(self, item : SequenceItem = None) -> SequenceItem:
         """
         Get the next sequence item.

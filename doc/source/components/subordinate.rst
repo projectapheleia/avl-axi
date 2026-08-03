@@ -149,3 +149,58 @@ This monitor drives the correct :any:`axi_resp_t.OKAY` / :any:`axi_resp_t.EXOKAY
 
 .. literalinclude:: ../../../examples/axi/axi5-exclusive/cocotb/example.py
     :language: python
+
+.. _response_overrides:
+
+AVL-AXI Response Overrides
+===========================
+
+Both :any:`SubordinateReadDriver` and :any:`SubordinateWriteDriver` support forcing a chosen response onto the R / B channel \
+via the Factory variable ``response_overrides``, without needing to subclass the driver. This is useful for directed error \
+injection - for example forcing a :any:`axi_resp_t.SLVERR` / :any:`axi_resp_t.DECERR` on an otherwise well-formed transaction \
+to check how the manager side of a test reacts.
+
+The shared implementation lives in ``Driver._apply_response_overrides_()``, called once by each of the read and write drivers.
+
+``response_overrides`` is a list of dicts, each describing one rule:
+
+.. code-block:: python
+
+    {
+        "resp":                      axi_resp_t,        # required - the response to force
+        "addr_range":                (lo, hi) or None,  # optional, inclusive - default: matches every transaction
+        "match_count":                int or None,      # optional - default: unlimited
+        "override_before_execution":  bool,             # optional - default: does not apply
+        "override_after_execution":   bool,              # optional - default: does not apply
+    }
+
+Rules are walked in registration order and the first match wins for a given call. A rule with no ``addr_range`` matches \
+every transaction on that channel; otherwise it matches when the transaction's address (``awaddr`` for writes, ``araddr`` \
+for reads) falls within the inclusive range. When a rule matches on a read it is applied uniformly to every ``rresp`` beat \
+of the burst; on a write it is applied to the single ``bresp``. If ``match_count`` is set it is decremented each time the \
+rule fires, and the rule is skipped once it reaches zero.
+
+Before and After
+~~~~~~~~~~~~~~~~
+
+Each subordinate driver calls the override hook twice per transaction - once before the :any:`ExclusivityMonitor` runs, and \
+once after - so overrides can either influence the monitor's own exclusivity decisions or simply have the final say over \
+what's driven onto the wire, regardless of what the monitor decided:
+
+    - ``override_before_execution`` (fires **before** the exclusivity monitor runs): the monitor sees the overridden \
+      response as if it were the genuine one. For reads, this means an overridden error will correctly cause the monitor \
+      to withhold exclusivity (no :any:`axi_resp_t.EXOKAY` promotion, no range granted), the same as a real error would.
+    - ``override_after_execution`` (fires **after** the exclusivity monitor runs): the override has the final, \
+      unconditional say over what's driven onto the wire - it can silently replace a monitor-assigned \
+      :any:`axi_resp_t.EXOKAY` with whatever the rule specifies.
+    - A rule may set both flags, in which case it affects the monitor's decision **and** guarantees the final wire value.
+    - A rule with neither flag set to exactly ``True`` (the default - both are ``None``) never applies, at either call \
+      site. ``False`` is treated the same as ``None``.
+
+.. note::
+
+    On a multi-beat read burst the override and monitor hooks are only evaluated once, on the first beat, since both act \
+    on the whole burst's ``rresp`` at once. This also means ``match_count`` is decremented once per burst, not once per beat.
+
+.. literalinclude:: ../../../examples/axi/axi5-response-override/cocotb/example.py
+    :language: python

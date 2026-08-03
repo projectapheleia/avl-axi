@@ -188,9 +188,20 @@ class SubordinateReadDriver(Driver):
             else:
                 byte_offset = 0
 
-            # Exclusive monitor
-            self.emonitor.process_read(item)
-            
+            # Exclusive monitor and response override hooks - evaluated once
+            # per burst, on the first beat, since all three act on the whole
+            # item (all rresp beats) via get_burst_addresses()/get_rlen().
+            # Calling any of them again on later beats would re-evaluate
+            # against already-mutated rresp values instead of the original
+            # response. Whether a given override rule affects the monitor's
+            # view (before) or only the final wire value (after) - or both -
+            # is chosen per-rule via override_before_execution/
+            # override_after_execution (see Driver._apply_response_overrides_).
+            if item._rcnt_ == 0:
+                self._apply_response_overrides_(item, when="before")
+                self.emonitor.process_read(item)
+                self._apply_response_overrides_(item, when="after")
+
             for s in r_s_signals:
                 if s == "rvalid":
                     self.i_f.set(s, 1)
