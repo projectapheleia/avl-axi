@@ -61,6 +61,24 @@ class Driver(avl.Driver):
         if not callable(self.credit_rate_limit):
             raise TypeError("credit rate_limit must be a callable (lambda function) that returns a float between 0.0 and 1.0")
 
+        self.back_to_back = avl.Factory.get_variable(f"{self.get_full_name()}.back_to_back", False)
+        """Force gapless (back-to-back) issuance by overriding the settings above that
+        would otherwise introduce delay between consecutive queued items: pins
+        control_rate_limit/data_rate_limit to 1.0 (no probabilistic idle injection) and
+        disables max_outstanding (no outstanding-count stall). This is equivalent to
+        setting those Factory variables directly - it exists as a single convenience
+        switch, not a separate code path. Does not affect credit-based backpressure
+        (a real resource constraint, not an artificial delay) or wake/sleep timing."""
+
+        if self.back_to_back:
+            self.control_rate_limit = lambda : 1.0
+            self.data_rate_limit = lambda : 1.0
+            self.max_outstanding = None
+            self.warning(
+                "back_to_back=True: overriding control_rate_limit, data_rate_limit and "
+                "max_outstanding to 1.0/1.0/None to force gapless issuance"
+            )
+
         # Keep track of active ids
         self._unique_ids_ = {}
         self._tag_ids_ = {}

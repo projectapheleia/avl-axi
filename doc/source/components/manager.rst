@@ -149,6 +149,39 @@ parameter which allows the user to limit the total number of transaction on the 
 
     :any:`allow_early_data <avl_axi._mwdriver.ManagerWriteDriver.allow_early_data>` and :any:`max_outstanding <avl_axi._driver.Driver.max_outstanding>` are mutually exclusive
 
+Back-to-Back Issuance
+~~~~~~~~~~~~~~~~~~~~~~
+
+With their defaults (rate limits at ``1.0``, no ``max_outstanding`` limit), the manager drivers already issue AW/AR/W \
+gaplessly - VALID is re-asserted with the next item's payload before the next clock edge is ever sampled, so the bus never \
+shows an idle bubble. No special option is needed for this common case.
+
+If a scenario has configured :any:`control_rate_limit <avl_axi._driver.Driver.control_rate_limit>`, \
+:any:`data_rate_limit <avl_axi._driver.Driver.data_rate_limit>` or :any:`max_outstanding <avl_axi._driver.Driver.max_outstanding>` \
+to introduce delay but still needs to force gapless issuance regardless, :any:`back_to_back <avl_axi._driver.Driver.back_to_back>` \
+overrides those settings back on that driver instance: it pins ``control_rate_limit``/``data_rate_limit`` to ``1.0`` and disables \
+``max_outstanding``. It is a convenience switch, not a separate code path - it does not affect credit-based backpressure (a real \
+resource constraint) or :ref:`wakeup <wakeup>` pre/post timing.
+
+The override is applied once, at driver construction, after the settings above have been read from the factory and validated - \
+so it is genuinely an override of whatever was configured, not just another default. When active, the driver logs a one-time \
+warning identifying which settings it overrode, so the override is visible in the log without being repeated per item:
+
+.. code-block:: text
+
+    WARNING  env.agent.mwdrv   back_to_back=True: overriding control_rate_limit, data_rate_limit and max_outstanding to 1.0/1.0/None to force gapless issuance
+
+.. code-block:: python
+
+    avl.Factory.set_variable("*.agent.mwdrv.back_to_back", True)
+    avl.Factory.set_variable("*.agent.mrdrv.back_to_back", True)
+
+.. literalinclude:: ../../../examples/axi/axi5-back-to-back/cocotb/example.py
+    :language: python
+
+.. literalinclude:: ../../../examples/axi/axi5-back-to-back-override/cocotb/example.py
+    :language: python
+
 .. _idunq:
 
 Unique Indices

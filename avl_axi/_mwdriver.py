@@ -123,7 +123,7 @@ class ManagerWriteDriver(Driver):
             self._outstanding_transactions_ += 1
 
             # Pending
-            if not bool(self.i_f.get("awpending")):
+            if not bool(self.i_f.get("awpending", default=1)):
                 self.i_f.set("awpending", 1)
                 await RisingEdge(self.i_f.aclk)
 
@@ -196,7 +196,7 @@ class ManagerWriteDriver(Driver):
                 await self.wait_on_rate(self.data_rate_limit())
 
                 # Pending
-                if not bool(self.i_f.get("arpending")):
+                if not bool(self.i_f.get("wpending", default=1)):
                     self.i_f.set("wpending", 1)
                     await RisingEdge(self.i_f.aclk)
 
