@@ -86,7 +86,7 @@ class WriteMonitor(avl.Monitor):
                         _and_ &= item.get(s, idx=i)
 
             item.set_event("data")
-            self.responseQ[item.get_id()].append(item)
+            self.responseQ[item.get_bus_id()].append(item)
 
     async def monitor_control(self) -> None:
         """
@@ -116,7 +116,7 @@ class WriteMonitor(avl.Monitor):
             item.set_event("control")
             self.controlQ.append(item)
             if item.has_rresp():
-                self._mrmon_.responseQ[item.get_id()].append(item)
+                self._mrmon_.responseQ[item.get_bus_id()].append(item)
 
             await RisingEdge(self.i_f.aclk)
 

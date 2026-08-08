@@ -79,7 +79,7 @@ class ReadMonitor(avl.Monitor):
             item.set("ar_wait_cycles", cnt)
             item.resize()
             item.set_event("control")
-            self.responseQ[item.get_id()].append(item)
+            self.responseQ[item.get_bus_id()].append(item)
             await RisingEdge(self.i_f.aclk)
 
     async def monitor_response(self, id : int=0) -> None:

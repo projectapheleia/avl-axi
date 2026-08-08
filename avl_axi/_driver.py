@@ -100,12 +100,12 @@ class Driver(avl.Driver):
         :type item: SequenceItem
         :return None
         """
-        self._unique_ids_[item.get_id()] -= 1
-        assert self._unique_ids_[item.get_id()] >= 0
+        self._unique_ids_[item.get_bus_id()] -= 1
+        assert self._unique_ids_[item.get_bus_id()] >= 0
 
         if item.get_tagop() != 0:
-            self._tag_ids_[item.get_id()] -= 1
-            assert self._tag_ids_[item.get_id()] >= 0
+            self._tag_ids_[item.get_bus_id()] -= 1
+            assert self._tag_ids_[item.get_bus_id()] >= 0
 
         self._outstanding_transactions_ -= 1
         assert self._outstanding_transactions_ >= 0
@@ -118,10 +118,10 @@ class Driver(avl.Driver):
         :type item: SequenceItem
         :return None
         """
-        self._unique_ids_[item.get_id()] += 1
+        self._unique_ids_[item.get_bus_id()] += 1
 
         if item.get_tagop() != 0:
-            self._tag_ids_[item.get_id()] += 1
+            self._tag_ids_[item.get_bus_id()] += 1
 
     async def reset(self) -> None:
         """
