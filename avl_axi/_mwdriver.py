@@ -70,6 +70,10 @@ class ManagerWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
 
+        # Deferred past this timestep's Read-Only phase so any other coroutine
+        # woken on this same edge (e.g. a monitor) samples the handshake before
+        # it's retracted here.
+        await NextTimeStep()
         for s in aw_m_signals:
             if s != "awpending":
                 self.i_f.set(s, 0)
@@ -159,6 +163,7 @@ class ManagerWriteDriver(Driver):
         This method is called to ensure that the data signals are in a known state.
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        await NextTimeStep()
         for s in w_m_signals:
             if s != "wpending":
                 self.i_f.set(s, 0)
@@ -251,6 +256,7 @@ class ManagerWriteDriver(Driver):
         By default 0's all signals - can be overridden in subclasses to add randomization or
         other behavior.
         """
+        await NextTimeStep()
         for s in b_m_signals:
             self.i_f.set(s, 0)
 

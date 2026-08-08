@@ -21,6 +21,17 @@ A single function is used to decide how to complete the request:
 This function is called with the an argument of the item to be completed, the request side of the protocol has already \
 populated the item in order to make a decision.
 
+Simulation Timing and Combinational READY
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+See :ref:`the equivalent note in the Manager driver documentation <manager>` for the full explanation. In short: AXI permits READY \
+to be generated combinationally from VALID, which the subordinate driver is free to exercise (e.g. asserting ``awready`` in the \
+same cycle it sees ``awvalid``, with no register in between). The subordinate driver retracts that ``awready``/``wready`` \
+immediately after observing the corresponding valid, in the same coroutine callback that detected it. Any other component woken \
+on the same clock edge (in particular :any:`ReadMonitor`/:any:`WriteMonitor`) is not guaranteed to run before that retracting \
+write, so it can lose the race and never observe the handshake. Each ``quiesce_control``/``quiesce_data``/``quiesce_response`` \
+therefore defers its clearing writes with ``await NextTimeStep()``, guaranteeing every same-edge reader has already run first.
+
 Rate Control
 ~~~~~~~~~~~~
 

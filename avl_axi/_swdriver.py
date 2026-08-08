@@ -7,7 +7,7 @@ import random
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import NextTimeStep, RisingEdge
 import random
 
 from ._driver import Driver
@@ -127,6 +127,10 @@ class SubordinateWriteDriver(Driver):
 
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        # Deferred past this timestep's Read-Only phase so any other coroutine
+        # woken on this same edge (e.g. a monitor) samples the handshake before
+        # it's retracted here.
+        await NextTimeStep()
         for s in aw_s_signals:
             self.i_f.set(s, 0)
 
@@ -171,6 +175,7 @@ class SubordinateWriteDriver(Driver):
 
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        await NextTimeStep()
         for s in w_s_signals:
             self.i_f.set(s, 0)
 
@@ -209,6 +214,7 @@ class SubordinateWriteDriver(Driver):
         This method is called after a response transaction is completed.
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        await NextTimeStep()
         for s in b_s_signals:
             if s != "bpending":
                 self.i_f.set(s, 0)

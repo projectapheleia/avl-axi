@@ -65,6 +65,25 @@ All manager driven protocol signals (valid, ready, last etc.) and handled by the
 signals are observed and the sequence item updated accordingly. This means that should the user want to implement directed checks within the \
 sequence they can do this easily.
 
+Simulation Timing and Combinational READY
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+AXI allows READY to be generated combinationally from VALID (it is the reverse - VALID waiting on READY - that the protocol forbids, \
+to avoid deadlock). A subordinate is therefore free to assert e.g. ``awready`` in the same cycle it sees ``awvalid``, with no register \
+in between.
+
+Each drive loop (``drive_control``/``drive_data``/``drive_response``) detects the handshake immediately after ``await RisingEdge(aclk)`` \
+and then calls its ``quiesce_*`` method to retract the just-driven valid. Other components - most notably :any:`ReadMonitor` and \
+:any:`WriteMonitor` - wake on that same clock edge and read the same signals to record the transaction. cocotb makes no guarantee about \
+the relative order in which independent coroutines resume on a shared edge. If the driver's retracting write happens to run before the \
+monitor's read, and the DUT's ready is combinational on valid, the ready pulse collapses back to 0 within that same simulated instant - \
+before the monitor ever observes it - and the beat silently goes unrecorded.
+
+Each ``quiesce_control``/``quiesce_data``/``quiesce_response`` therefore starts with ``await NextTimeStep()`` before clearing any signal. \
+This defers the retracting write until after every coroutine scheduled on the current edge (including monitors) has had its read, so no \
+consumer can ever lose that race, regardless of simulator or scheduling order. See ``examples/axi/axi5-comb-ready`` for a subordinate that \
+exercises this on every channel, and fails without the ``NextTimeStep()`` deferral.
+
 Callbacks
 ~~~~~~~~~
 :any:`SequenceItem` have a number of events based on the protocol:

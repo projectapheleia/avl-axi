@@ -6,7 +6,7 @@
 
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import NextTimeStep, RisingEdge
 import random
 
 from ._driver import Driver
@@ -63,6 +63,10 @@ class ManagerReadDriver(Driver):
 
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        # Deferred past this timestep's Read-Only phase so any other coroutine
+        # woken on this same edge (e.g. a monitor) samples the handshake before
+        # it's retracted here.
+        await NextTimeStep()
         for s in ar_m_signals:
             if s != "arpending":
                 self.i_f.set(s, 0)
@@ -158,6 +162,7 @@ class ManagerReadDriver(Driver):
         This method is called after driving the response signals.
         By default 0's all signals - can be overridden in subclasses to add randomization or other behavior.
         """
+        await NextTimeStep()
         for s in r_m_signals:
             self.i_f.set(s, 0)
 
