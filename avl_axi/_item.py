@@ -95,7 +95,7 @@ class SequenceItem(avl.SequenceItem):
 
         for i in range(rn):
             if hasattr(self, "rid"):
-                self.set("rid", self.get_id(), idx=i)
+                self.set("rid", self.get_bus_id(), idx=i)
             if hasattr(self, "rloop"):
                 self.set("rloop", self.get("arloop", default=0), idx=i)
             if hasattr(self, "rtrace"):
@@ -153,7 +153,7 @@ class SequenceItem(avl.SequenceItem):
 
         if self.has_bresp():
             # Signals which must match command -> response
-            assert self.get_id()    == self.get("bid", default=0)
+            assert self.get_bus_id() == self.get("bid", default=0)
             assert self.get_loop()  == self.get("bloop", default=0)
             assert self.get_trace() == self.get("btrace", default=0)
             assert self.get_idunq() == self.get("bidunq", default=0)
@@ -161,7 +161,7 @@ class SequenceItem(avl.SequenceItem):
         if self.has_rresp():
             for i in range(self.get_rlen()+1):
                 # Signals which must match command -> response
-                assert self.get_id()    == self.get("rid", default=0, idx=i)
+                assert self.get_bus_id() == self.get("rid", default=0, idx=i)
                 assert self.get_loop()  == self.get("rloop", default=0, idx=i)
                 assert self.get_trace() == self.get("rtrace", default=0, idx=i)
                 assert self.get_idunq() == self.get("ridunq", default=0, idx=i)
@@ -252,7 +252,7 @@ class SequenceItem(avl.SequenceItem):
         else:
             self.set("araddr", addr)
 
-    def get_id(self) -> int:
+    def get_bus_id(self) -> int:
         """
         Return ID
 
@@ -262,6 +262,18 @@ class SequenceItem(avl.SequenceItem):
             return int(self.get("awid", default=0))
         else:
             return int(self.get("arid", default=0))
+
+    def set_bus_id(self, id: int) -> None:
+        """
+        Set ID
+
+        :param id: ID to set (awid for writes, arid for reads)
+        :type id: int
+        """
+        if hasattr(self, "awaddr"):
+            self.set("awid", id)
+        else:
+            self.set("arid", id)
 
     def get_idunq(self) -> int:
         """

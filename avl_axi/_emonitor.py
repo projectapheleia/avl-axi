@@ -80,7 +80,7 @@ class ExclusivityMonitor(avl.Component):
         if not hasattr(item, "awlock"):
             return
 
-        id = item.get_id()
+        id = item.get_bus_id()
         (lo, hi) = self._get_range_(item)
 
         if item.awlock:
@@ -114,7 +114,7 @@ class ExclusivityMonitor(avl.Component):
         if not hasattr(item, "arlock"):
             return
 
-        id = item.get_id()
+        id = item.get_bus_id()
         (lo, hi) = self._get_range_(item)
 
         if item.arlock:

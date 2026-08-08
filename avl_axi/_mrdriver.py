@@ -98,12 +98,12 @@ class ManagerReadDriver(Driver):
 
             # Unique ID
             if item.get_idunq() or item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
-                while self._unique_ids_[item.get_id()] > 0:
+                while self._unique_ids_[item.get_bus_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             # TAG Unique ID
             if item.get_tagop() != 0:
-                while self._tag_ids_[item.get_id()] > 0:
+                while self._tag_ids_[item.get_bus_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             # Max Outstanding
@@ -281,7 +281,7 @@ class ManagerReadDriver(Driver):
             item.add_event("response", self._deactivate_)
             self.controlQ.append(item)
 
-            rid = item.get_id()
+            rid = item.get_bus_id()
             self.responseQ[rid].append(item)
             self.response_pending += 1
 

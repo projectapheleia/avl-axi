@@ -105,16 +105,16 @@ class ManagerWriteDriver(Driver):
 
             # Unique ID
             if item.get_idunq() or item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
-                while self._unique_ids_[item.get_id()] > 0:
+                while self._unique_ids_[item.get_bus_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             if item.get("awatop", default=axi_atomic_t.NON_ATOMIC) != axi_atomic_t.NON_ATOMIC:
-                while self._mrdrv_._unique_ids_[item.get_id()] > 0:
+                while self._mrdrv_._unique_ids_[item.get_bus_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             # TAG Unique ID
             if item.get_tagop() != 0:
-                while self._tag_ids_[item.get_id()] > 0:
+                while self._tag_ids_[item.get_bus_id()] > 0:
                     await RisingEdge(self.i_f.aclk)
 
             # Max Outstanding
@@ -341,7 +341,7 @@ class ManagerWriteDriver(Driver):
             if self.allow_early_data:
                 self.dataQ.append(item)
 
-            id = item.get_id()
+            id = item.get_bus_id()
 
             if item.has_bresp():
                 self.responseQ[id].append(item)
