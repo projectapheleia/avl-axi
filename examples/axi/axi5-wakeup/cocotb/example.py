@@ -9,8 +9,8 @@ import random
 import avl
 import avl_axi
 import cocotb
-
 from z3 import ULE
+
 
 class CustomWrite(avl_axi.WriteItem):
 

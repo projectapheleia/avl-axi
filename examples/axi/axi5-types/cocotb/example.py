@@ -4,7 +4,8 @@
 # Apheleia types example
 
 import cocotb
-from avl_axi._types import axi_burst_t, axi_resp_t, axi_domain_t, axi_atomic_t, axi_secsid_t
+from avl_axi._types import axi_atomic_t, axi_burst_t, axi_domain_t, axi_resp_t, axi_secsid_t
+
 
 @cocotb.test
 async def test(dut):

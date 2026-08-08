@@ -5,7 +5,6 @@
 
 from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence
-
 from typing import Any
 
 import avl
@@ -14,6 +13,7 @@ from z3 import ULE, BitVecVal, Implies, Or, ZeroExt
 from ._signals import ar_m_signals, aw_m_signals, b_s_signals, is_random, r_s_signals, w_m_signals
 from ._types import axi_atomic_t, axi_burst_t, axi_resp_t, signal_to_type
 from ._utils import get_burst_addresses
+
 
 class SequenceItem(avl.SequenceItem):
 

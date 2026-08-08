@@ -132,7 +132,7 @@ class ReadMonitor(avl.Monitor):
                             item.set_event("response", item)
                             self.item_export.write(item)
                         else:
-                            setattr(item, "_rresp_complete_", True)
+                            item._rresp_complete_ = True
 
                 # Wait for next edge
                 await RisingEdge(self.i_f.aclk)

@@ -4,15 +4,17 @@
 # Apheleia Verification Library Driver
 
 
+import random
+
 import avl
 import cocotb
-from cocotb.triggers import RisingEdge, NextTimeStep
-import random
+from cocotb.triggers import NextTimeStep, RisingEdge
 
 from ._driver import Driver
 from ._signals import aw_m_signals, b_m_signals, b_s_signals, w_m_signals
 from ._types import axi_atomic_t
 from ._utils import get_beat_byte_offset
+
 
 class ManagerWriteDriver(Driver):
 
@@ -303,7 +305,7 @@ class ManagerWriteDriver(Driver):
                     delattr(item, "_rresp_complete_")
                     item.set_event("response", item)
                 else:
-                    setattr(item, "_bresp_complete_", True)
+                    item._bresp_complete_ = True
 
     async def drive_credits(self) -> None:
         """

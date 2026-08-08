@@ -3,9 +3,8 @@
 # Description:
 # Apheleia Verification Library Manager Sequence
 
-from collections.abc import MutableMapping, MutableSequence
-
 import random
+from collections.abc import MutableMapping, MutableSequence
 
 import avl
 

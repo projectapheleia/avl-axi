@@ -8,7 +8,7 @@ import avl
 import avl_axi
 import cocotb
 from avl_axi._types import axi_resp_t
-from z3 import UGE, ULE, And, BitVecVal, Implies, Or, ZeroExt
+
 
 class DirectedSequence(avl_axi.ManagerSequence):
     async def body(self) -> None:

@@ -4,10 +4,11 @@
 # Apheleia Verification Library Driver
 
 
+import random
+
 import avl
 import cocotb
 from cocotb.triggers import NextTimeStep, RisingEdge
-import random
 
 from ._driver import Driver
 from ._signals import ar_m_signals, r_m_signals, r_s_signals
@@ -240,7 +241,7 @@ class ManagerReadDriver(Driver):
                         delattr(item, "_bresp_complete_")
                         item.set_event("response", item)
                     else:
-                        setattr(item, "_rresp_complete_", True)
+                        item._rresp_complete_ = True
 
             await self.quiesce_response()
 

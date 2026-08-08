@@ -4,7 +4,6 @@
 # Apheleia Verification Library Coverage
 
 from collections.abc import MutableMapping, MutableSequence
-
 from typing import Any
 
 import avl

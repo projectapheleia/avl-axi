@@ -182,7 +182,7 @@ class WriteMonitor(avl.Monitor):
                     item.set_event("response")
                     self.item_export.write(item)
                 else:
-                    setattr(item, "_bresp_complete_", True)
+                    item._bresp_complete_ = True
 
             # Wait for next edge
             await RisingEdge(self.i_f.aclk)

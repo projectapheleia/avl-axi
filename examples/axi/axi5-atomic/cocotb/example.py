@@ -7,9 +7,10 @@
 import avl
 import avl_axi
 import cocotb
-from avl_axi._types import axi_atomic_t, axi_resp_t
 from avl_axi._item import WriteItem
+from avl_axi._types import axi_atomic_t, axi_resp_t
 from z3 import UGE, ULE, And
+
 
 class DirectedSequence(avl_axi.ManagerSequence):
     async def body(self) -> None:
