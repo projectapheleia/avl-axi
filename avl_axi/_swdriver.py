@@ -225,7 +225,7 @@ class SubordinateWriteDriver(Driver):
         """
         self.responseQ.clear()
         while True:
-            while not self.responseQ or self.i_f.get("arestn") == 0 or self.i_f.get("awakeup", default=1) == 0:
+            while not self.responseQ or self.i_f.get("aresetn") == 0 or self.i_f.get("awakeup", default=1) == 0:
                 await RisingEdge(self.i_f.aclk)
 
             if self.in_order or self.i_f.Ordered_Write_Observation:

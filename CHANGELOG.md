@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+ - [#49](https://github.com/projectapheleia/avl-axi/issues/49) Subordinate Write Driver: `drive_response`'s reset guard tested a misspelled signal name (`arestn` instead of `aresetn`), so `Interface.get()` found no such signal and returned its `None` default; `None == 0` is `False`, leaving the B channel with no reset guard at all - silently, with no exception or warning. Impact is limited because `Driver.run_phase` cancels and restarts the drive tasks on each `FallingEdge(aresetn)` and `drive_response` clears `responseQ` on entry, but two gaps remained: the initial reset window (where `aresetn` may be asserted at time 0 with no falling edge to trigger a restart) ran wholly unguarded, and any item reaching `responseQ` while reset was asserted would drive `BVALID` and its payload during reset. The `awakeup` half of the guard was unaffected. The line now matches its read-side counterpart in `_srdriver.py`. Present since the first commit.
+
 ## [v1.0.0] - 2026-08-08
 
 First stable release. From this point on the public API follows semantic versioning.
