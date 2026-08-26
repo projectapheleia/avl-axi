@@ -200,6 +200,9 @@ class Driver(avl.Driver):
 
         By default calls reset() to set all signals to their default values.
         Can be overridden in subclasses to add randomization or other behavior.
+
+        Note: may be time-consuming - the concrete driver overrides await. Callers
+        must sample any bus state they need before calling.
         """
 
         await self.reset()
@@ -222,6 +225,9 @@ class Driver(avl.Driver):
 
         By default calls reset() to set all signals to their default values.
         Can be overridden in subclasses to add randomization or other behavior.
+
+        Note: may be time-consuming - the concrete driver overrides await. Callers
+        must sample any bus state they need before calling.
         """
 
         await self.reset()
@@ -244,6 +250,9 @@ class Driver(avl.Driver):
 
         By default calls reset() to set all signals to their default values.
         Can be overridden in subclasses to add randomization or other behavior.
+
+        Note: may be time-consuming - the concrete driver overrides await. Callers
+        must sample any bus state they need before calling.
         """
 
         await self.reset()

@@ -106,12 +106,13 @@ class SubordinateReadDriver(Driver):
                 if self.i_f.get("arvalid"):
                     break
 
-            await self.quiesce_control()
-
-            # Send item to response phase
+            # Populate Item with control data - must precede quiesce_control(),
+            # which awaits and would move this read off the handshake edge.
             for s in ar_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
             item.resize()
+
+            await self.quiesce_control()
 
             # Handle Memory Access
             if self.memory is not None:

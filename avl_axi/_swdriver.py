@@ -158,12 +158,13 @@ class SubordinateWriteDriver(Driver):
                 if self.i_f.get("awvalid"):
                     break
 
-            await self.quiesce_control()
-
-            # Populate Item with control data
+            # Populate Item with control data - must precede quiesce_control(),
+            # which awaits and would move this read off the handshake edge.
             for s in aw_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
             item.resize()
+
+            await self.quiesce_control()
 
             self.controlQ.append(item)
 
