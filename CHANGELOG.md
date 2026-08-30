@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v1.1.0] - 2026-08-30
 
 ### Fixed
  - [PR #51](https://github.com/projectapheleia/avl-axi/pull/51) Subordinate Write/Read Drivers: `drive_control` sampled the AW/AR request payload into its item *after* calling `quiesce_control()`, which since [PR #41](https://github.com/projectapheleia/avl-axi/pull/41) begins with `await NextTimeStep()` - so the capture landed a full timestep past the handshake edge. Against a manager driving back-to-back transfers, edge N's non-blocking updates are visible by then and the item recorded the *next* transfer's address and control, and the sample also raced the peer manager driver's own `quiesce_control()`, which resumes on that same `NextTimeStep`. The sample now happens immediately after the handshake edge, before quiescing, matching `_rmonitor`/`_wmonitor` (which already read at exactly that point) so driver and monitor items agree. Await counts are unchanged, so `back_to_back` timing and PR #41's ready-pulse hold are unaffected. Introduced by PR #41; the equivalent data/response sites were already correctly ordered.
