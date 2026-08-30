@@ -107,7 +107,7 @@ class SubordinateReadDriver(Driver):
                     break
 
             # Populate Item with control data - must precede quiesce_control(),
-            # which awaits and would move this read off the handshake edge.
+            # which awaits and would move this sample off the handshake edge.
             for s in ar_m_signals:
                 item.set(s, self.i_f.get(s, default=0))
             item.resize()
